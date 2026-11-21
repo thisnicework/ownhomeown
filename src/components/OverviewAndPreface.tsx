@@ -135,7 +135,6 @@ export const OverviewAndPreface: React.FC = () => {
 
       {/* 02. 전시서문 (기획의도) — PDF Page 1 Left Panel + Staggered Entrance */}
       <section id="preface" className="pdf-preface-band" aria-label="전시서문">
-        <div className="pdf-preface-band__black-notch" aria-hidden="true" />
 
         <div
           ref={prefaceRef}
