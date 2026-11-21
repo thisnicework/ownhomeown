@@ -656,51 +656,162 @@
   padding-top: 0.3rem;
 }
 
-/* Architectural Hanja Stroke Reassembly Motion (公 → 해체 → 共 · 主) */
-.pdf-stroke-morph {
+/* Real-Typeface Sliced Deconstruction Motion: 公主 → 해체 → 共 · 主 */
+.psm {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  width: 100%;
-  max-width: 340px;
+  gap: 1.5rem;
+  width: fit-content;
 }
 
-.pdf-stroke-morph__svg {
-  width: 100%;
-  height: auto;
+.psm__word {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding-block: 0.35rem;
+  transition: gap 0.8s var(--ease-expo);
+}
+
+.psm--cut .psm__word {
+  gap: 0.9rem;
+}
+
+.psm--split .psm__word {
+  gap: clamp(2.2rem, 4vw, 3.25rem);
+}
+
+.psm__slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.psm__stack {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  font-family: var(--font-serif);
+  font-size: clamp(4.2rem, 7vw, 6rem);
+  font-weight: 500;
+  line-height: 1;
+  color: #0e0e0e;
+  user-select: none;
+}
+
+.psm__glyph {
+  grid-area: 1 / 1;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  transition: opacity 0.45s ease;
+}
+
+.psm__half {
+  grid-area: 1 / 1;
   display: block;
-  overflow: visible;
+  transition: transform 0.65s var(--ease-expo);
+  will-change: transform;
 }
 
-.pdf-stroke-morph__bar {
-  transition:
-    transform 0.85s var(--ease-expo),
-    width 0.85s var(--ease-expo),
-    opacity 0.55s ease;
+.psm__half--top {
+  clip-path: inset(0 0 50% 0);
 }
 
-.pdf-stroke-morph__labels {
-  opacity: 0;
-  transition: opacity 0.45s ease 0.25s;
+.psm__half--bottom {
+  clip-path: inset(50% 0 0 0);
 }
 
-.pdf-stroke-morph__labels.is-visible {
+/* Phase 1: Whole 公主 */
+.psm--whole .psm__glyph--old {
   opacity: 1;
 }
 
-.pdf-stroke-morph__controls {
+.psm--whole .psm__glyph--new {
+  opacity: 0;
+}
+
+/* Phase 2: Crisp Horizontal Slice & Shear */
+.psm--cut .psm__half--top {
+  transform: translate3d(-10px, -2px, 0);
+}
+
+.psm--cut .psm__half--bottom {
+  transform: translate3d(10px, 2px, 0);
+}
+
+.psm--cut .psm__glyph--old {
+  opacity: 0.55;
+}
+
+.psm--cut .psm__glyph--new {
+  opacity: 0;
+}
+
+/* Phase 3: Reassembled & Separated 共 · 主 */
+.psm--split .psm__glyph--old {
+  opacity: 0;
+}
+
+.psm--split .psm__glyph--new {
+  opacity: 1;
+}
+
+.psm--split .psm__half--top,
+.psm--split .psm__half--bottom {
+  transform: translate3d(0, 0, 0);
+}
+
+/* Horizontal Razor Cutline */
+.psm__cutline {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  top: 41%;
+  height: 1.5px;
+  background: #000000;
+  transform: scaleX(0);
+  transform-origin: left;
+  opacity: 0;
+  transition: transform 0.5s var(--ease-expo), opacity 0.35s ease;
+  pointer-events: none;
+}
+
+.psm--cut .psm__cutline {
+  transform: scaleX(1);
+  opacity: 1;
+}
+
+.psm__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #141414;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.5s ease 0.18s, transform 0.55s var(--ease-expo) 0.18s;
+  white-space: nowrap;
+}
+
+.psm--split .psm__label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.psm__controls {
   display: flex;
   align-items: center;
   gap: 1.25rem;
-  padding-top: 0.65rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.2);
+  padding-top: 0.7rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.22);
 }
 
-.pdf-stroke-morph__step {
+.psm__step {
   position: relative;
   background: transparent;
   border: none;
-  padding: 0 0 0.2rem;
+  padding: 0 0 0.22rem;
   font-size: 0.78rem;
   font-weight: 500;
   letter-spacing: 0.04em;
@@ -709,16 +820,16 @@
   transition: color 0.25s ease;
 }
 
-.pdf-stroke-morph__step:hover {
+.psm__step:hover {
   color: #141414;
 }
 
-.pdf-stroke-morph__step.is-active {
+.psm__step.is-active {
   color: #000000;
   font-weight: 700;
 }
 
-.pdf-stroke-morph__step.is-active::after {
+.psm__step.is-active::after {
   content: '';
   position: absolute;
   left: 0;
