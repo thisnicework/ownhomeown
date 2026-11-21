@@ -345,8 +345,8 @@ export const PrefaceStrokeMorph: React.FC = () => {
     let lastDrawnT = -1;
     let lastReportedPhase: MorphTarget = currentT > 0.5 ? 'gongAndJu' : 'gongju';
 
-    // One-shot timings (seconds): brief hold on 公主 (0.75s) -> brisk morph (0.95s) -> stay on 共 · 主
-    const T_HOLD_1 = 0.75;
+    // One-shot timings (seconds): brief hold on 公主 (1.0s) -> brisk morph (0.95s) -> stay on 共 · 主
+    const T_HOLD_1 = 1.0;
     const T_MORPH_FWD = 0.95;
 
     const applyLabelStyle = (t: number) => {
