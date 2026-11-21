@@ -656,106 +656,131 @@
   padding-top: 0.3rem;
 }
 
-/* Scroll-Driven Deconstruction Typographic Stage (公主 → 共 · 主) */
-.pdf-deconstruct-stage {
+/* Clear, Simple Typographic Deconstruction: 公主 (strike) ↓ 共 | 主 */
+.pdf-decon {
   display: flex;
   flex-direction: column;
-  gap: 1.35rem;
+  align-items: flex-start;
+  width: fit-content;
 }
 
-.pdf-deconstruct-glyphs {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  padding-left: 1rem;
-  gap: 0.45rem;
-  min-height: clamp(120px, 14vw, 175px);
-}
-
-.pdf-deconstruct-char {
+.pdf-decon__before {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+}
+
+.pdf-decon__old-word {
+  font-family: var(--font-serif);
+  font-size: clamp(2.4rem, 4vw, 3.2rem);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  color: #141414;
+  transition: opacity 0.6s var(--ease-expo) 0.45s;
+}
+
+.pdf-decon.is-active .pdf-decon__old-word {
+  opacity: 0.34;
+}
+
+.pdf-decon__strike {
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  top: 52%;
+  height: 2px;
+  background: #000000;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.55s var(--ease-expo) 0.35s;
+}
+
+.pdf-decon.is-active .pdf-decon__strike {
+  transform: scaleX(1);
+}
+
+.pdf-decon__connector {
+  align-self: center;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-block: 0.85rem;
+}
+
+.pdf-decon__stem {
+  display: block;
+  width: 1px;
+  height: 100%;
+  background: #141414;
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 0.5s var(--ease-expo) 0.65s;
+}
+
+.pdf-decon.is-active .pdf-decon__stem {
+  transform: scaleY(1);
+}
+
+.pdf-decon__after {
+  display: flex;
+  align-items: center;
+  gap: clamp(1.4rem, 2.8vw, 2.25rem);
+}
+
+.pdf-decon__part {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 1em;
-  font-size: clamp(4.2rem, 7.6vw, 6.4rem);
-  will-change: transform;
+  gap: 0.55rem;
+  opacity: 0;
+  transition: opacity 0.7s var(--ease-expo) 0.85s,
+    transform 0.75s var(--ease-expo) 0.85s;
 }
 
-.pdf-deconstruct-hanja {
+.pdf-decon__part--left {
+  transform: translateX(18px);
+}
+
+.pdf-decon__part--right {
+  transform: translateX(-18px);
+}
+
+.pdf-decon.is-active .pdf-decon__part {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.pdf-decon__hanja {
   font-family: var(--font-serif);
-  font-weight: 500;
-  line-height: 1;
-  color: #111111;
-  user-select: none;
-  will-change: transform, opacity;
-}
-
-.pdf-deconstruct-hanja--old {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  text-align: center;
-}
-
-.pdf-deconstruct-sub {
-  margin-top: 0.65rem;
-  font-size: 0.76rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  color: #1a1a1a;
-  white-space: nowrap;
-}
-
-.pdf-deconstruct-crack {
-  width: 1px;
-  height: clamp(68px, 8vw, 96px);
-  background: #141414;
-  transform-origin: center;
-  margin-inline: 0.55rem;
-  margin-bottom: 1.5rem;
-  will-change: transform, opacity;
-}
-
-.pdf-deconstruct-track {
-  width: 100%;
-  max-width: 260px;
-  height: 1px;
-  background: rgba(0, 0, 0, 0.22);
-  overflow: hidden;
-}
-
-.pdf-deconstruct-track__fill {
-  display: block;
-  width: 100%;
-  height: 100%;
-  background: #111111;
-  transform-origin: left;
-  will-change: transform;
-}
-
-.pdf-deconstruct-steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.pdf-deconstruct-steps li {
-  display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  font-size: 0.78rem;
-  color: rgba(20, 20, 20, 0.45);
-  transition: color 0.25s ease;
-}
-
-.pdf-deconstruct-steps li.is-active {
-  color: #111111;
+  font-size: clamp(3.6rem, 6vw, 5.2rem);
   font-weight: 600;
+  line-height: 1;
+  color: #000000;
+  user-select: none;
+}
+
+.pdf-decon__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #141414;
+}
+
+.pdf-decon__divider {
+  width: 1px;
+  height: 54px;
+  margin-bottom: 1.4rem;
+  background: rgba(0, 0, 0, 0.35);
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: transform 0.55s var(--ease-expo) 1s;
+}
+
+.pdf-decon.is-active .pdf-decon__divider {
+  transform: scaleY(1);
 }
 
 .pdf-preface-band__heading {
@@ -1666,12 +1691,7 @@
 
   .pdf-preface-aside {
     position: static;
-    gap: 2rem;
-  }
-
-  .pdf-deconstruct-glyphs {
-    padding-left: 0;
-    justify-content: flex-start;
+    gap: 2.25rem;
   }
 
   .pdf-stagger-2 {
