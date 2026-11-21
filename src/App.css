@@ -1110,7 +1110,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   05. 크레딧 — Pure Black + Diagonal Grey Wedge + Spotlight Hover
+   05. 크레딧 — Pure Black + Spotlight Hover
    -------------------------------------------------------------------------- */
 .pdf-credits-band {
   position: relative;
@@ -1118,18 +1118,7 @@
   background: var(--pdf-black);
   color: var(--ink-on-dark);
   border-top: 1px solid rgba(255, 255, 255, 0.14);
-  padding: clamp(6.5rem, 10vw, 9.5rem) var(--pad-x) clamp(5rem, 9vw, 8.5rem);
-}
-
-.pdf-credits-band__wedge {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: clamp(160px, 24vw, 340px);
-  height: clamp(80px, 7.2vw, 112px);
-  background: var(--pdf-grey);
-  clip-path: polygon(100% 0, 100% 100%, 0 100%, 34% 0);
-  pointer-events: none;
+  padding: var(--pad-y) var(--pad-x);
 }
 
 .pdf-credits-band__container {
@@ -1552,11 +1541,6 @@
   .pdf-credits-band__inner {
     grid-template-columns: 1fr;
     gap: 3rem;
-  }
-
-  .pdf-credits-band__wedge {
-    width: 140px;
-    height: 76px;
   }
 }
 

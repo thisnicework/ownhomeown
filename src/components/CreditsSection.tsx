@@ -86,8 +86,6 @@ export const CreditsSection: React.FC = () => {
 
   return (
     <section id="credits" className="pdf-credits-band" aria-label="크레딧">
-      <div className="pdf-credits-band__wedge" aria-hidden="true" />
-
       <div
         ref={creditsRef}
         className={`pdf-credits-band__container reveal-block ${
