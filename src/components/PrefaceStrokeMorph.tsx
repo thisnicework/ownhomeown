@@ -9,9 +9,9 @@ const PHASES: { id: MorphPhase; label: string }[] = [
 ];
 
 const DURATIONS: Record<MorphPhase, number> = {
-  whole: 2200,
-  cut: 1000,
-  split: 3400,
+  whole: 2800,
+  cut: 1500,
+  split: 3800,
 };
 
 const NEXT: Record<MorphPhase, MorphPhase> = {

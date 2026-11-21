@@ -641,8 +641,6 @@
 }
 
 .pdf-preface-aside {
-  position: sticky;
-  top: calc(var(--nav-height) + 4rem);
   display: flex;
   flex-direction: column;
   gap: clamp(2.5rem, 5vw, 4.25rem);
@@ -658,6 +656,7 @@
 
 /* Real-Typeface Sliced Deconstruction Motion: 公主 → 해체 → 共 · 主 */
 .psm {
+  --ease-smooth: cubic-bezier(0.37, 0, 0.22, 1);
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -670,11 +669,11 @@
   align-items: flex-start;
   gap: 0.35rem;
   padding-block: 0.35rem;
-  transition: gap 0.8s var(--ease-expo);
+  transition: gap 1.15s var(--ease-smooth);
 }
 
 .psm--cut .psm__word {
-  gap: 0.9rem;
+  gap: 0.95rem;
 }
 
 .psm--split .psm__word {
@@ -705,13 +704,16 @@
   position: relative;
   display: inline-grid;
   place-items: center;
-  transition: opacity 0.45s ease;
+  transition:
+    opacity 0.95s var(--ease-smooth),
+    filter 0.95s var(--ease-smooth),
+    transform 1.05s var(--ease-smooth);
 }
 
 .psm__half {
   grid-area: 1 / 1;
   display: block;
-  transition: transform 0.65s var(--ease-expo);
+  transition: transform 1.1s var(--ease-smooth);
   will-change: transform;
 }
 
@@ -726,36 +728,42 @@
 /* Phase 1: Whole 公主 */
 .psm--whole .psm__glyph--old {
   opacity: 1;
+  filter: blur(0px);
 }
 
 .psm--whole .psm__glyph--new {
   opacity: 0;
+  filter: blur(2.5px);
 }
 
-/* Phase 2: Crisp Horizontal Slice & Shear */
+/* Phase 2: Smooth Horizontal Slice & Shear */
 .psm--cut .psm__half--top {
-  transform: translate3d(-10px, -2px, 0);
+  transform: translate3d(-9px, -2px, 0);
 }
 
 .psm--cut .psm__half--bottom {
-  transform: translate3d(10px, 2px, 0);
+  transform: translate3d(9px, 2px, 0);
 }
 
 .psm--cut .psm__glyph--old {
-  opacity: 0.55;
+  opacity: 0.52;
+  filter: blur(0.6px);
 }
 
 .psm--cut .psm__glyph--new {
-  opacity: 0;
+  opacity: 0.14;
+  filter: blur(2px);
 }
 
 /* Phase 3: Reassembled & Separated 共 · 主 */
 .psm--split .psm__glyph--old {
   opacity: 0;
+  filter: blur(2.5px);
 }
 
 .psm--split .psm__glyph--new {
   opacity: 1;
+  filter: blur(0px);
 }
 
 .psm--split .psm__half--top,
@@ -766,21 +774,23 @@
 /* Horizontal Razor Cutline */
 .psm__cutline {
   position: absolute;
-  left: -10%;
-  right: -10%;
-  top: 41%;
+  left: -8%;
+  right: -8%;
+  top: calc(0.35rem + clamp(2.1rem, 3.5vw, 3rem));
   height: 1.5px;
   background: #000000;
   transform: scaleX(0);
-  transform-origin: left;
+  transform-origin: center;
   opacity: 0;
-  transition: transform 0.5s var(--ease-expo), opacity 0.35s ease;
+  transition:
+    transform 0.9s var(--ease-smooth),
+    opacity 0.75s var(--ease-smooth);
   pointer-events: none;
 }
 
 .psm--cut .psm__cutline {
   transform: scaleX(1);
-  opacity: 1;
+  opacity: 0.85;
 }
 
 .psm__label {
@@ -789,8 +799,10 @@
   letter-spacing: 0.04em;
   color: #141414;
   opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.5s ease 0.18s, transform 0.55s var(--ease-expo) 0.18s;
+  transform: translateY(8px);
+  transition:
+    opacity 0.85s var(--ease-smooth) 0.25s,
+    transform 0.95s var(--ease-smooth) 0.25s;
   white-space: nowrap;
 }
 
