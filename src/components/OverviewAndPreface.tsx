@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { EXHIBITION_META, PREFACE_CONTENT } from '../data/exhibition';
 import { useReveal } from '../hooks/useReveal';
 import { HeroMotionForms } from './HeroMotionForms';
+import { PrefaceStrokeMorph } from './PrefaceStrokeMorph';
 
 type ActiveGlyph = 'gong' | 'ju' | null;
 
@@ -150,32 +151,7 @@ export const OverviewAndPreface: React.FC = () => {
               〈쓰레기 궁전의 신데렐라〉의 이야기를 전시의 언어로 확장합니다.
             </p>
 
-            {/* Simple, razor-clear typographic deconstruction: 公主 (strike) ↓ 共 | 主 */}
-            <div
-              className={`pdf-decon ${prefaceVisible ? 'is-active' : ''}`}
-              aria-label="공주(公主)를 공(共)과 주(主)로 해체"
-            >
-              <div className="pdf-decon__before">
-                <span className="pdf-decon__old-word">公主</span>
-                <span className="pdf-decon__strike" aria-hidden="true" />
-              </div>
-
-              <div className="pdf-decon__connector" aria-hidden="true">
-                <span className="pdf-decon__stem" />
-              </div>
-
-              <div className="pdf-decon__after">
-                <div className="pdf-decon__part pdf-decon__part--left">
-                  <span className="pdf-decon__hanja">共</span>
-                  <span className="pdf-decon__label">함께 공</span>
-                </div>
-                <span className="pdf-decon__divider" aria-hidden="true" />
-                <div className="pdf-decon__part pdf-decon__part--right">
-                  <span className="pdf-decon__hanja">主</span>
-                  <span className="pdf-decon__label">주인 주</span>
-                </div>
-              </div>
-            </div>
+            <PrefaceStrokeMorph />
           </aside>
 
           <div className="pdf-preface-band__content">
