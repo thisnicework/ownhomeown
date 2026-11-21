@@ -82,7 +82,7 @@ export const EXHIBITION_META = {
   originNote:
     '본 전시는 2026-2 독립창작프로젝트Ⅱ 선정작 단편영화 〈쓰레기 궁전의 신데렐라〉의 이야기를 전시의 언어로 확장합니다.',
   datesFull: '2026. 11. 25 (수) – 11. 28 (토)',
-  datesCompact: '11.25–11.28 Wed–Sat',
+  datesCompact: '26.11.25–26.11.28 Wed–Sat',
   hours: '12:00–20:00',
   lastAdmission: '19:30 입장 마감',
   admission: '무료 관람 (현장 자유 입장)',

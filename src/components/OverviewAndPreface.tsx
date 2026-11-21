@@ -122,7 +122,7 @@ export const OverviewAndPreface: React.FC = () => {
 
           <p className="pdf-cover-band__subtitle">{EXHIBITION_META.subtitle}</p>
           <p className="pdf-cover-band__schedule">
-            26.11.25–26.11.28 Wed–Sat {EXHIBITION_META.hours}
+            {EXHIBITION_META.datesCompact} {EXHIBITION_META.hours}
           </p>
           <p className="pdf-cover-band__venue">
             {EXHIBITION_META.venueName} {EXHIBITION_META.address}
