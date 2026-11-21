@@ -45,8 +45,8 @@ interface FloorMarkProps {
 
 /**
  * Exact recreation of the PDF Page 2 floor emblems:
- * - 2F: 공主 2F (white on black)
- * - 1F: 주共 1F (black on white)
+ * - 2F: 공共 2F (white on black)
+ * - 1F: 주主 1F (black on white)
  */
 export const FloorMark: React.FC<FloorMarkProps> = ({
   floor,
@@ -55,7 +55,7 @@ export const FloorMark: React.FC<FloorMarkProps> = ({
 }) => {
   const resolvedTone = tone ?? (floor === '1F' ? 'dark' : 'light');
   const ko = floor === '1F' ? '주' : '공';
-  const hanja = floor === '1F' ? '共' : '主';
+  const hanja = floor === '1F' ? '主' : '共';
 
   return (
     <span

@@ -39,7 +39,7 @@ export const CosmosFloorplan: React.FC<CosmosFloorplanProps> = ({
           viewBox="0 0 540 360"
           className="pdf-plan__svg"
           role="img"
-          aria-label="코스모스 1층 평면도 (주共 1F): GUESTDESK, INFORMATION, ENT, SECTION 1, SECTION 2"
+          aria-label="코스모스 1층 평면도 (주主 1F): GUESTDESK, INFORMATION, ENT, SECTION 1, SECTION 2"
         >
           <path
             d="M 16 24 L 272 24 A 196 196 0 0 1 460 206 L 460 220"
@@ -204,7 +204,7 @@ export const CosmosFloorplan: React.FC<CosmosFloorplanProps> = ({
           viewBox="0 0 540 360"
           className="pdf-plan__svg"
           role="img"
-          aria-label="코스모스 2층 평면도 (공主 2F): SECTION 3, SECTION 4"
+          aria-label="코스모스 2층 평면도 (공共 2F): SECTION 3, SECTION 4"
         >
           <path
             d="M 16 24 L 272 24 A 196 196 0 0 1 460 206 L 460 338 L 16 338 Z"

@@ -125,7 +125,7 @@ export const SectionsShowcase: React.FC = () => {
           }`}
           onClick={() => setMobileFloor('1F')}
         >
-          1F 주共 · SEC 1–2
+          1F 주主 · SEC 1–2
         </button>
         <button
           type="button"
@@ -136,7 +136,7 @@ export const SectionsShowcase: React.FC = () => {
           }`}
           onClick={() => setMobileFloor('2F')}
         >
-          2F 공主 · SEC 3–4
+          2F 공共 · SEC 3–4
         </button>
       </div>
 
@@ -146,7 +146,7 @@ export const SectionsShowcase: React.FC = () => {
           {[sec1, sec2].map((sec) => renderSectionBlock(sec, 'light'))}
         </div>
 
-        {/* Center Column — Top Black (공主 2F) + Bottom White (주共 1F) */}
+        {/* Center Column — Top Black (공共 2F) + Bottom White (주主 1F) */}
         <div className="pdf-spread__col pdf-spread__col--plans">
           <div className="pdf-spread__plan-half pdf-spread__plan-half--2f">
             <CosmosFloorplan

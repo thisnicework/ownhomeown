@@ -134,7 +134,7 @@ export const EXHIBITION_SECTIONS: ExhibitionSectionData[] = [
       '동화 속 신데렐라는 왕에게 선택받고 구원받는다. 그러나 영화의 두 청소년에게는 마법을 걸어줄 요정도, 자신을 구원해 줄 왕자도 없다.',
       '가정과 학교 어디에서도 안전함을 느끼지 못하는 열여덟 살 ‘민들레’는 돌아갈 집을 잃고 공중 여자화장실에서 문제아 선배 ‘백조희’를 만난다. 두 사람은 버려진 물건들로 자신들만의 ‘쓰레기 궁전’을 만들며, 서로에게 손을 내미는 용기가 또 다른 용기로 이어지는 가능성을 보여준다.',
     ],
-    structuralTag: '1F 주共 · 2026-2 독립창작프로젝트Ⅱ 선정작',
+    structuralTag: '1F 주主 · 2026-2 독립창작프로젝트Ⅱ 선정작',
     artists: [
       '박성훈',
       '오민영',
@@ -176,7 +176,7 @@ export const EXHIBITION_SECTIONS: ExhibitionSectionData[] = [
       '화려한 궁전에서 살아가던 공주는 알람 소리와 함께 평범한 학생으로 돌아온다. 학교에 갈 준비를 시작하지만, 궁전에 남고 싶은 또 다른 자신인 ‘공주의 나’가 집 안을 동화 속 공간으로 바꾸며 외출을 방해한다.',
       '관객은 네 가지 동화를 바탕으로 한 미니게임을 통해 ‘공주의 나’와 대결한다. 게임을 마칠 때마다 주어진 이야기는 새롭게 쓰이고, 마침내 자신의 선택으로 만들어낸 결말을 마주한다.',
     ],
-    structuralTag: '1F 주共 · 4가지 동화 미니게임 · 인터랙티브',
+    structuralTag: '1F 주主 · 4가지 동화 미니게임 · 인터랙티브',
     artists: ['고다선', '민지은', '송수연', '송시은', '이서윤'],
     experienceTime: '직접 플레이 참여',
     participationNote: '1층 하단 SECTION 2 공간에서 네 가지 미니게임을 직접 플레이할 수 있습니다.',
@@ -201,7 +201,7 @@ export const EXHIBITION_SECTIONS: ExhibitionSectionData[] = [
       '관객이 직접 색칠한 가구가 하나씩 집 안에 들어오고, 서로 다른 손길이 닿은 물건들이 하나의 공간을 채운다. 집이 가득 차면 오래된 가구는 이사를 가고, 새로운 가구가 들어오면 집의 모습 또한 변화한다.',
       '각자의 가구와 이야기가 쌓이는 동안, 비어 있던 집은 모두가 함께 만드는 집, 공가(共家)가 된다.',
     ],
-    structuralTag: '2F 공主 · 空家(빈집) → 共家(함께 만드는 집)',
+    structuralTag: '2F 공共 · 空家(빈집) → 共家(함께 만드는 집)',
     artists: ['전세원', '홍진택'],
     experienceTime: '가구 채색 및 참여',
     participationNote: '2층 좌측 SECTION 3에서 직접 색칠한 가구를 공동의 집에 배치할 수 있습니다.',
@@ -225,7 +225,7 @@ export const EXHIBITION_SECTIONS: ExhibitionSectionData[] = [
       '각자의 집은 고유한 형태와 경계를 간직한 채 서로 연결되어 있다. 관객은 집과 집 사이를 머물고 이동하며 타인과의 거리를 조절하고, 자신에게 편안한 방식으로 공간을 경험한다.',
       '서로의 차이와 경계를 존중하면서도 함께 머물 수 있는 공간. 각자의 집이 모여 이루는 공동체의 가능성을 상상한다.',
     ],
-    structuralTag: '2F 공主 · 체류형 공간 설치',
+    structuralTag: '2F 공共 · 체류형 공간 설치',
     artists: ['김인건', '이경민', '이정민'],
     experienceTime: '자유 이동 및 체류',
     participationNote: '2층 우측 SECTION 4에서 집과 집 사이의 거리와 경계를 자유롭게 경험할 수 있습니다.',
@@ -385,7 +385,7 @@ export const SUPPORT_CREDITS: CreditRow[] = [
 export const VISITOR_GUIDELINES = [
   {
     num: '01',
-    title: '추천 관람 동선 (1F 주共 → 2F 공主)',
+    title: '추천 관람 동선 (1F 주主 → 2F 공共)',
     detail:
       '1층 입구(ENT)로 입장해 GUESTDESK와 INFORMATION을 지나 SECTION 1(단편영화) → SECTION 2(픽셀 게임)를 관람한 뒤, 2층으로 올라가 SECTION 3(인터랙티브 미디어아트) → SECTION 4(공동의 집) 순서로 이동하시기를 권장합니다.',
   },
@@ -446,7 +446,7 @@ export const SPONSORS: SponsorItem[] = [
     categoryLabel: 'VENUE · 전시 공간',
     nameKo: '코스모스 (COSMOS)',
     nameEn: 'COSMOS EXHIBITION HALL',
-    description: '경기 안산시 단원구 예술1길 14 · 1F 주共 / 2F 공主 전시장',
+    description: '경기 안산시 단원구 예술1길 14 · 1F 주主 / 2F 공共 전시장',
     details: ['1F SECTION 1–2', '2F SECTION 3–4'],
     monogram: 'COSMOS',
   },

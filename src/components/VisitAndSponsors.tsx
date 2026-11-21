@@ -73,8 +73,8 @@ export const VisitAndSponsors: React.FC = () => {
               <div>
                 <dt>공간구성</dt>
                 <dd>
-                  1F 주共 — SECTION 1, SECTION 2
-                  <span className="pdf-dl-sub">2F 공主 — SECTION 3, SECTION 4</span>
+                  1F 주主 — SECTION 1, SECTION 2
+                  <span className="pdf-dl-sub">2F 공共 — SECTION 3, SECTION 4</span>
                 </dd>
               </div>
             </dl>
