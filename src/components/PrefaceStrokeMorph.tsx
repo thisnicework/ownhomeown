@@ -308,7 +308,6 @@ export const PrefaceStrokeMorph: React.FC = () => {
   );
 
   const manualTargetRef = useRef<MorphTarget | null>(manualTarget);
-  const isHoveredRef = useRef(false);
 
   useEffect(() => {
     manualTargetRef.current = manualTarget;
@@ -323,10 +322,12 @@ export const PrefaceStrokeMorph: React.FC = () => {
     let width = 0;
     let height = 0;
     let rafId = 0;
-    let isVisible = true;
+    let isVisible = false;
+    let hasTriggeredAuto = prefersReducedMotion();
     let lastNow = performance.now();
 
-    // Auto-loop state machine (smoothly pauses on hover or manual selection)
+    // One-shot auto transition: holds 公主 briefly once scrolled into view,
+    // morphs briskly into 共 · 主 (함께 공 / 주인 주), and stays there permanently.
     let autoTime = 0;
     let currentT = prefersReducedMotion() ? 1 : 0;
     let lastReportedPhase: MorphTarget = currentT > 0.5 ? 'gongAndJu' : 'gongju';
@@ -348,40 +349,36 @@ export const PrefaceStrokeMorph: React.FC = () => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         isVisible = entry.isIntersecting;
+        if (entry.isIntersecting) {
+          hasTriggeredAuto = true;
+        }
       },
-      { threshold: 0.05 }
+      { threshold: 0.25 }
     );
     observer.observe(canvas);
 
-    // Cycle timings (seconds): hold 公主 (2.2s) -> morph (1.9s) -> hold 共·主 (3.4s) -> return (1.7s)
-    const T_HOLD_1 = 2.2;
-    const T_MORPH_FWD = 1.9;
-    const T_HOLD_2 = 3.4;
-    const T_MORPH_BACK = 1.7;
-    const TOTAL_CYCLE = T_HOLD_1 + T_MORPH_FWD + T_HOLD_2 + T_MORPH_BACK;
+    // One-shot timings (seconds): brief hold on 公主 (0.75s) -> brisk morph (0.95s) -> stay on 共 · 主
+    const T_HOLD_1 = 0.75;
+    const T_MORPH_FWD = 0.95;
 
     const render = (now: number) => {
       rafId = window.requestAnimationFrame(render);
       const dt = Math.min(0.05, (now - lastNow) / 1000);
       lastNow = now;
-      if (!isVisible || width <= 0 || height <= 0) return;
+      if (width <= 0 || height <= 0) return;
+      if (!isVisible && currentT !== 0 && currentT !== 1) return;
 
       const manual = manualTargetRef.current;
       if (manual !== null) {
         const goal = manual === 'gongAndJu' ? 1 : 0;
-        currentT += (goal - currentT) * Math.min(1, dt * 4.5);
+        currentT += (goal - currentT) * Math.min(1, dt * 7.5);
         if (Math.abs(goal - currentT) < 0.002) currentT = goal;
-      } else if (!prefersReducedMotion() && !isHoveredRef.current) {
-        autoTime = (autoTime + dt) % TOTAL_CYCLE;
+      } else if (!prefersReducedMotion() && hasTriggeredAuto && currentT < 1) {
+        autoTime += dt;
         if (autoTime < T_HOLD_1) {
           currentT = 0;
-        } else if (autoTime < T_HOLD_1 + T_MORPH_FWD) {
-          currentT = (autoTime - T_HOLD_1) / T_MORPH_FWD;
-        } else if (autoTime < T_HOLD_1 + T_MORPH_FWD + T_HOLD_2) {
-          currentT = 1;
         } else {
-          currentT =
-            1 - (autoTime - (T_HOLD_1 + T_MORPH_FWD + T_HOLD_2)) / T_MORPH_BACK;
+          currentT = clamp01((autoTime - T_HOLD_1) / T_MORPH_FWD);
         }
       }
 
@@ -439,20 +436,12 @@ export const PrefaceStrokeMorph: React.FC = () => {
   }, []);
 
   const handleSelect = (target: MorphTarget) => {
-    setManualTarget((prev) => (prev === target ? null : target));
+    setManualTarget(target);
     setDisplayPhase(target);
   };
 
   return (
-    <div
-      className="psm-callig"
-      onMouseEnter={() => {
-        isHoveredRef.current = true;
-      }}
-      onMouseLeave={() => {
-        isHoveredRef.current = false;
-      }}
-    >
+    <div className="psm-callig">
       <div
         className="psm-callig__stage"
         onClick={() =>
