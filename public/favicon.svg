@@ -1,6 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <rect width="64" height="64" fill="#000000"/>
-  <path d="M12 14H34C45.046 14 52 20.954 52 32V50H12V14Z" stroke="#FFFFFF" stroke-width="2.5"/>
-  <rect x="20" y="34" width="12" height="8" fill="#FFFFFF"/>
-  <rect x="36" y="24" width="8" height="18" stroke="#FFFFFF" stroke-width="2"/>
+  <!-- Top: 共 (Geometric Display Hanja) -->
+  <rect x="16" y="12" width="32" height="3.5" fill="#FFFFFF"/>
+  <rect x="23" y="7" width="4" height="16" fill="#FFFFFF"/>
+  <rect x="37" y="7" width="4" height="16" fill="#FFFFFF"/>
+  <rect x="12" y="21" width="40" height="3.8" fill="#FFFFFF"/>
+  <polygon points="22,25 27,25 22,31 17,31" fill="#FFFFFF"/>
+  <polygon points="37,25 42,25 47,31 42,31" fill="#FFFFFF"/>
+  <!-- Bottom: 主 (Geometric Display Hanja) -->
+  <polygon points="29,34 34,34 36,38.5 31,38.5" fill="#FFFFFF"/>
+  <rect x="16" y="40.5" width="32" height="3.6" fill="#FFFFFF"/>
+  <rect x="30" y="41" width="4" height="15" fill="#FFFFFF"/>
+  <rect x="20" y="47.5" width="24" height="3.4" fill="#FFFFFF"/>
+  <rect x="12" y="54.5" width="40" height="4" fill="#FFFFFF"/>
 </svg>

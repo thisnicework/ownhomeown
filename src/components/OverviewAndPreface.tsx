@@ -5,14 +5,27 @@ import { HeroMotionForms } from './HeroMotionForms';
 
 type ActiveGlyph = 'gong' | 'ju' | null;
 
+const PREFACE_STAGES = [
+  { num: '01', label: '주어진 서사' },
+  { num: '02', label: '해체와 재해석' },
+  { num: '03', label: '공동의 집' },
+];
+
+function clamp01(v: number): number {
+  return v < 0 ? 0 : v > 1 ? 1 : v;
+}
+
 /**
- * Main Hero (#overview) on flat #808080 background with top & bottom pure-black
- * sculptural silhouettes morphing fluidly like contemporary motion graphics.
+ * Main Hero (#overview) + Exhibition Preface (#preface) with
+ * scroll-driven typographic deconstruction (公主 → 共 · 主) in the left sticky column.
  */
 export const OverviewAndPreface: React.FC = () => {
   const [activeGlyph, setActiveGlyph] = useState<ActiveGlyph>(null);
   const [scrollRatio, setScrollRatio] = useState(0);
+  const [prefaceProgress, setPrefaceProgress] = useState(0);
+
   const heroRef = useRef<HTMLElement | null>(null);
+  const prefaceSectionRef = useRef<HTMLElement | null>(null);
 
   const [prefaceRef, prefaceVisible] = useReveal<HTMLDivElement>(0.12);
   const [staggerRef, staggerVisible] = useReveal<HTMLDivElement>(0.25);
@@ -21,23 +34,47 @@ export const OverviewAndPreface: React.FC = () => {
     const prefersReduced = window.matchMedia(
       '(prefers-reduced-motion: reduce)'
     ).matches;
-    if (prefersReduced) return;
 
     const onScroll = () => {
-      const el = heroRef.current;
-      if (!el) return;
-      const h = el.offsetHeight || 1;
-      setScrollRatio(Math.min(1, Math.max(0, window.scrollY / h)));
+      const heroEl = heroRef.current;
+      if (heroEl && !prefersReduced) {
+        const h = heroEl.offsetHeight || 1;
+        setScrollRatio(clamp01(window.scrollY / h));
+      }
+
+      const prefEl = prefaceSectionRef.current;
+      if (prefEl) {
+        if (prefersReduced) {
+          setPrefaceProgress(1);
+          return;
+        }
+        const rect = prefEl.getBoundingClientRect();
+        const vh = window.innerHeight || 1;
+        // Smooth 0..1 progress as #preface scrolls through the comfortable reading window
+        const start = vh * 0.72;
+        const end = -Math.max(rect.height - vh * 0.65, vh * 0.25);
+        const raw = (start - rect.top) / (start - end);
+        setPrefaceProgress(clamp01(raw));
+      }
     };
 
     window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
     onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
   }, []);
 
   const toggleGlyph = (glyph: 'gong' | 'ju') => {
     setActiveGlyph((prev) => (prev === glyph ? null : glyph));
   };
+
+  // Deconstruction kinematics derived cleanly from scroll progress (0..1)
+  const swapT = clamp01((prefaceProgress - 0.18) / 0.36); // 公 -> 共 swap
+  const splitT = clamp01((prefaceProgress - 0.24) / 0.44); // 公主 -> 共   主 separation
+  const activeStage = prefaceProgress < 0.34 ? 0 : prefaceProgress < 0.68 ? 1 : 2;
 
   return (
     <>
@@ -111,9 +148,7 @@ export const OverviewAndPreface: React.FC = () => {
               </p>
             )}
             {activeGlyph === null && (
-              <p className="pdf-meaning-kicker">
-                2026–2 독립창작프로젝트Ⅱ
-              </p>
+              <p className="pdf-meaning-kicker">2026–2 독립창작프로젝트Ⅱ</p>
             )}
           </div>
 
@@ -133,20 +168,113 @@ export const OverviewAndPreface: React.FC = () => {
         </a>
       </section>
 
-      {/* 02. 전시서문 (기획의도) — PDF Page 1 Left Panel + Staggered Entrance */}
-      <section id="preface" className="pdf-preface-band" aria-label="전시서문">
-
+      {/* 02. 전시서문 (기획의도) — Left Sticky Scroll-Driven Deconstruction Typo (公主 → 共 · 主) */}
+      <section
+        id="preface"
+        ref={prefaceSectionRef}
+        className="pdf-preface-band"
+        aria-label="전시서문"
+      >
         <div
           ref={prefaceRef}
           className={`pdf-preface-band__inner reveal-block ${
             prefaceVisible ? 'is-visible' : ''
           }`}
         >
-          <p className="pdf-preface-band__origin">
-            본 전시는 2026-2 독립창작프로젝트Ⅱ 선정작 단편영화
-            <br />
-            〈쓰레기 궁전의 신데렐라〉의 이야기를 전시의 언어로 확장합니다.
-          </p>
+          <aside className="pdf-preface-aside">
+            <p className="pdf-preface-band__origin">
+              본 전시는 2026-2 독립창작프로젝트Ⅱ 선정작 단편영화
+              <br />
+              〈쓰레기 궁전의 신데렐라〉의 이야기를 전시의 언어로 확장합니다.
+            </p>
+
+            {/* Scroll-Driven Typographic Deconstruction Stage: 公主 → 共 · 主 */}
+            <div
+              className="pdf-deconstruct-stage"
+              aria-label="공주에서 공과 주로의 스크롤 해체 타이포그래피"
+            >
+              <div className="pdf-deconstruct-glyphs">
+                {/* Left Character: 公 morphing into 共 */}
+                <div
+                  className="pdf-deconstruct-char pdf-deconstruct-char--left"
+                  style={{
+                    transform: `translate3d(${-splitT * 18}px, 0, 0)`,
+                  }}
+                >
+                  <span
+                    className="pdf-deconstruct-hanja pdf-deconstruct-hanja--old"
+                    style={{
+                      opacity: Math.max(0, 1 - swapT * 1.35),
+                      transform: `translateY(${-swapT * 18}px)`,
+                    }}
+                    aria-hidden="true"
+                  >
+                    公
+                  </span>
+                  <span
+                    className="pdf-deconstruct-hanja pdf-deconstruct-hanja--new"
+                    style={{
+                      opacity: clamp01((swapT - 0.15) * 1.25),
+                      transform: `translateY(${(1 - swapT) * 18}px)`,
+                    }}
+                  >
+                    共
+                  </span>
+                  <span
+                    className="pdf-deconstruct-sub"
+                    style={{ opacity: clamp01((splitT - 0.15) * 1.4) }}
+                  >
+                    함께 공
+                  </span>
+                </div>
+
+                {/* Vertical Fracture Hairline opening between 共 and 主 */}
+                <span
+                  className="pdf-deconstruct-crack"
+                  aria-hidden="true"
+                  style={{
+                    transform: `scaleY(${splitT})`,
+                    opacity: splitT * 0.55,
+                  }}
+                />
+
+                {/* Right Character: 主 */}
+                <div
+                  className="pdf-deconstruct-char pdf-deconstruct-char--right"
+                  style={{
+                    transform: `translate3d(${splitT * 18}px, 0, 0)`,
+                  }}
+                >
+                  <span className="pdf-deconstruct-hanja">主</span>
+                  <span
+                    className="pdf-deconstruct-sub"
+                    style={{ opacity: clamp01((splitT - 0.15) * 1.4) }}
+                  >
+                    주인 주
+                  </span>
+                </div>
+              </div>
+
+              {/* Minimal Swiss-grid scroll progress index */}
+              <div className="pdf-deconstruct-track" aria-hidden="true">
+                <span
+                  className="pdf-deconstruct-track__fill"
+                  style={{ transform: `scaleX(${prefaceProgress})` }}
+                />
+              </div>
+              <ol className="pdf-deconstruct-steps">
+                {PREFACE_STAGES.map((stage, i) => (
+                  <li
+                    key={stage.num}
+                    className={activeStage === i ? 'is-active' : ''}
+                  >
+                    <span>{stage.num}</span>
+                    <span>{stage.label}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </aside>
 
           <div className="pdf-preface-band__content">
             <h2 className="pdf-preface-band__heading">
