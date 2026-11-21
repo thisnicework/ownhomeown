@@ -46,32 +46,73 @@ function mirrorPose(pose: MonolithPose): MonolithPose {
 }
 
 /**
+ * Evaluates the outer contour's y value at a given normalized x along a monotonic edge.
+ */
+function sampleEdgeY(edge: Pt[], x: number): number {
+  if (x <= edge[0][0]) return edge[0][1];
+  for (let i = 0; i < edge.length - 1; i++) {
+    const [x0, y0] = edge[i];
+    const [x1, y1] = edge[i + 1];
+    if (x >= x0 && x <= x1) {
+      if (Math.abs(x1 - x0) < 1e-6) return Math.min(y0, y1);
+      const t = (x - x0) / (x1 - x0);
+      return y0 + (y1 - y0) * t;
+    }
+  }
+  return edge[edge.length - 1][1];
+}
+
+/**
+ * Finds the shallowest (for top) or deepest (for bottom) outer edge y across [xStart, xEnd]
+ * so we can mathematically guarantee a thick, bold black ink bridge around every counter cutout.
+ */
+function extremeEdgeY(
+  edge: Pt[],
+  xStart: number,
+  xEnd: number,
+  mode: 'min' | 'max'
+): number {
+  let result = mode === 'min' ? 1 : 0;
+  const steps = 12;
+  for (let s = 0; s <= steps; s++) {
+    const sx = xStart + ((xEnd - xStart) * s) / steps;
+    const sy = sampleEdgeY(edge, clamp01(sx));
+    result = mode === 'min' ? Math.min(result, sy) : Math.max(result, sy);
+  }
+  for (const [ex, ey] of edge) {
+    if (ex >= xStart && ex <= xEnd) {
+      result = mode === 'min' ? Math.min(result, ey) : Math.max(result, ey);
+    }
+  }
+  return result;
+}
+
+/**
  * Generates a unique, glitch-free Poster-01 style TOP black display-type silhouette.
- * Built strictly left-to-right with 15 monotonic vertices combining stepped vertical bays,
- * 45° chiseled Hanja prongs, and a cleanly placed negative-space counter cutout.
+ * Enforces generous minimum black ink bridge thickness everywhere (never pinches thin).
  */
 function generateTopPose(flipped: boolean): MonolithPose {
   const x1 = rand(0.03, 0.08);
-  const x2 = x1 + rand(0.07, 0.12);
-  const x3 = x2 + rand(0.06, 0.11);
-  const x4 = x3 + rand(0.09, 0.14);
-  const x5 = x4 + rand(0.08, 0.12);
-  const x6 = x5 + rand(0.07, 0.11);
+  const x2 = x1 + rand(0.08, 0.13);
+  const x3 = x2 + rand(0.06, 0.1);
+  const x4 = x3 + rand(0.09, 0.13);
+  const x5 = x4 + rand(0.09, 0.13);
+  const x6 = x5 + rand(0.07, 0.1);
   const x7 = x6 + rand(0.07, 0.11);
-  const x8 = clamp(x7 + rand(0.11, 0.17), 0.68, 0.8);
-  const x9 = clamp(x8 + rand(0.09, 0.14), 0.82, 0.93);
+  const x8 = clamp(x7 + rand(0.11, 0.16), 0.68, 0.8);
+  const x9 = clamp(x8 + rand(0.09, 0.13), 0.82, 0.92);
 
-  const leftDrop = rand(0.8, 0.98);
-  const midShelf = rand(0.42, 0.64);
-  const midProng = rand(0.82, 0.98);
-  const notchUp = rand(0.54, 0.74);
-  const rightProng = rand(0.84, 0.99);
-  const deepBay = rand(0.16, 0.34);
-  const farRightDrop = rand(0.78, 0.96);
+  const leftDrop = rand(0.84, 0.98);
+  const midShelf = rand(0.56, 0.72);
+  const midProng = rand(0.84, 0.98);
+  const notchUp = rand(0.62, 0.78);
+  const rightProng = rand(0.86, 0.99);
+  const deepBay = rand(0.28, 0.42);
+  const farRightDrop = rand(0.8, 0.96);
 
   const edge: Pt[] = [
-    [0.0, rand(0.32, 0.56)],
-    [x1, rand(0.22, 0.42)],
+    [0.0, rand(0.42, 0.6)],
+    [x1, rand(0.32, 0.48)],
     [x1, leftDrop],
     [x2, leftDrop],
     [x3, midShelf],
@@ -80,18 +121,20 @@ function generateTopPose(flipped: boolean): MonolithPose {
     [x5, midProng],
     [x6, notchUp],
     [x7, rightProng],
-    [x8, rand(0.48, 0.66)],
+    [x8, rand(0.54, 0.7)],
     [x8, deepBay],
     [x9, deepBay],
     [x9, farRightDrop],
-    [1.0, clamp(farRightDrop - rand(0.04, 0.12), 0.62, 0.94)],
+    [1.0, clamp(farRightDrop - rand(0.04, 0.12), 0.66, 0.94)],
   ];
 
-  // Anchor negative-space counter cleanly along the top edge inside a solid black zone
-  const cx = rand(0.14, 0.42);
-  const cw = rand(0.08, 0.13);
-  const ch = rand(0.24, 0.34);
-  const slant = rand(0.035, 0.06);
+  // Place top counter cleanly over a thick zone and clamp its height to guarantee >= 0.34 black bridge
+  const cw = rand(0.08, 0.12);
+  const cx = rand(x4 - 0.02, Math.max(x4 + 0.02, x7 - cw - 0.02));
+  const minOuterY = extremeEdgeY(edge, cx - 0.04, cx + cw + 0.04, 'min');
+  const minBridge = 0.36;
+  const ch = clamp(minOuterY - minBridge, 0.18, 0.3);
+  const slant = rand(0.03, 0.05);
   const counter: [Pt, Pt, Pt, Pt] = [
     [cx, -0.02],
     [cx + cw, -0.02],
@@ -105,55 +148,56 @@ function generateTopPose(flipped: boolean): MonolithPose {
 
 /**
  * Generates a unique, glitch-free Poster-01 style BOTTOM black display-type silhouette.
- * Built strictly left-to-right with 15 monotonic vertices combining heavy vertical monoliths,
- * bold twin 45° rising peaks, stepped shoulders, and a diagonal bottom counter cutout.
+ * Enforces generous minimum black ink bridge thickness everywhere (never pinches thin).
  */
 function generateBottomPose(flipped: boolean): MonolithPose {
-  const x1 = rand(0.05, 0.11);
-  const x2 = x1 + rand(0.06, 0.11);
-  const x3 = x2 + rand(0.05, 0.1);
-  const x4 = x3 + rand(0.1, 0.16);
+  const x1 = rand(0.06, 0.11);
+  const x2 = x1 + rand(0.06, 0.1);
+  const x3 = x2 + rand(0.05, 0.09);
+  const x4 = x3 + rand(0.1, 0.15);
   const x5 = x4 + rand(0.06, 0.1);
-  const x6 = x5 + rand(0.11, 0.17);
-  const x7 = clamp(x6 + rand(0.06, 0.1), 0.58, 0.72);
-  const x8 = clamp(x7 + rand(0.09, 0.14), 0.7, 0.83);
+  const x6 = x5 + rand(0.11, 0.16);
+  const x7 = clamp(x6 + rand(0.07, 0.11), 0.58, 0.72);
+  const x8 = clamp(x7 + rand(0.09, 0.13), 0.7, 0.83);
   const x9 = clamp(x8 + rand(0.05, 0.08), 0.78, 0.89);
-  const x10 = clamp(x9 + rand(0.05, 0.08), 0.86, 0.95);
+  const x10 = clamp(x9 + rand(0.05, 0.07), 0.86, 0.94);
 
-  const leftBlock = rand(0.04, 0.22);
-  const leftSlot = rand(0.54, 0.72);
-  const peak1 = rand(0.02, 0.16);
-  const centerValley = rand(0.32, 0.48);
+  const leftBlock = rand(0.06, 0.22);
+  const leftSlot = rand(0.46, 0.58);
+  const peak1 = rand(0.02, 0.15);
+  const centerValley = rand(0.28, 0.42);
   const peak2 = rand(0.02, 0.14);
-  const rightStep = rand(0.36, 0.52);
-  const rightShelf = rand(0.22, 0.38);
+  const rightStep = rand(0.32, 0.44);
+  const rightShelf = rand(0.2, 0.34);
 
   const edge: Pt[] = [
     [0.0, leftBlock],
     [x1, leftBlock],
     [x1, leftSlot],
     [x2, leftSlot],
-    [x3, rand(0.22, 0.36)],
+    [x3, rand(0.2, 0.34)],
     [x4, peak1],
     [x5, centerValley],
     [x6, peak2],
-    [x7, clamp(peak2 + rand(0.06, 0.14), 0.1, 0.28)],
+    [x7, clamp(peak2 + rand(0.06, 0.12), 0.1, 0.26)],
     [x7, rightStep],
     [x8, rightStep],
     [x9, rightShelf],
     [x10, rightShelf],
-    [x10, rand(0.62, 0.78)],
-    [1.0, rand(0.48, 0.66)],
+    [x10, rand(0.5, 0.62)],
+    [1.0, rand(0.42, 0.56)],
   ];
 
-  // Place diagonal counter cleanly in the thick lower black ink zone
-  const cx = rand(0.58, 0.78);
-  const cw = rand(0.08, 0.12);
-  const cy = rand(0.66, 0.76);
+  // Place bottom diagonal counter cleanly under the thick center-right peak with >= 0.36 black bridge above
+  const cw = rand(0.08, 0.11);
+  const cx = clamp(rand(x5 + 0.04, x8 - cw - 0.02), 0.48, 0.72);
+  const maxOuterY = extremeEdgeY(edge, cx - 0.04, cx + cw + 0.04, 'max');
+  const minBridge = 0.38;
+  const counterTop = clamp(maxOuterY + minBridge, 0.68, 0.82);
   const counter: [Pt, Pt, Pt, Pt] = [
-    [cx, cy + 0.08],
-    [cx + cw, cy - 0.08],
-    [cx + cw, cy + 0.22],
+    [cx, clamp(counterTop + 0.1, 0.78, 0.92)],
+    [cx + cw, counterTop],
+    [cx + cw, 1.04],
     [cx, 1.04],
   ];
 
