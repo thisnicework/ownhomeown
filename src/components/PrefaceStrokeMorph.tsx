@@ -154,27 +154,43 @@ function easeInOutQuart(t: number): number {
   return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
 }
 
-function lerpStroke(a: CalligStroke, b: CalligStroke, t: number): CalligStroke {
-  return {
-    x0: lerp(a.x0, b.x0, t),
-    y0: lerp(a.y0, b.y0, t),
-    cx1: lerp(a.cx1, b.cx1, t),
-    cy1: lerp(a.cy1, b.cy1, t),
-    cx2: lerp(a.cx2, b.cx2, t),
-    cy2: lerp(a.cy2, b.cy2, t),
-    x1: lerp(a.x1, b.x1, t),
-    y1: lerp(a.y1, b.y1, t),
-    w0: lerp(a.w0, b.w0, t),
-    wMid: lerp(a.wMid, b.wMid, t),
-    w1: lerp(a.w1, b.w1, t),
-    serifStart: lerp(a.serifStart ?? 0, b.serifStart ?? 0, t),
-    serifEnd: lerp(a.serifEnd ?? 0, b.serifEnd ?? 0, t),
-    alpha: lerp(a.alpha ?? 1, b.alpha ?? 1, t),
-  };
+// Pre-allocated flat scratch buffers to guarantee zero GC allocations per frame
+const STROKE_STEPS = 24;
+const LEFT_X = new Float32Array(STROKE_STEPS + 1);
+const LEFT_Y = new Float32Array(STROKE_STEPS + 1);
+const RIGHT_X = new Float32Array(STROKE_STEPS + 1);
+const RIGHT_Y = new Float32Array(STROKE_STEPS + 1);
+const MORPH_SCRATCH: CalligStroke = {
+  x0: 0, y0: 0, cx1: 0, cy1: 0, cx2: 0, cy2: 0, x1: 0, y1: 0,
+  w0: 0, wMid: 0, w1: 0, serifStart: 0, serifEnd: 0, alpha: 1,
+};
+
+function lerpStrokeInto(
+  out: CalligStroke,
+  a: CalligStroke,
+  b: CalligStroke,
+  t: number
+): CalligStroke {
+  out.x0 = lerp(a.x0, b.x0, t);
+  out.y0 = lerp(a.y0, b.y0, t);
+  out.cx1 = lerp(a.cx1, b.cx1, t);
+  out.cy1 = lerp(a.cy1, b.cy1, t);
+  out.cx2 = lerp(a.cx2, b.cx2, t);
+  out.cy2 = lerp(a.cy2, b.cy2, t);
+  out.x1 = lerp(a.x1, b.x1, t);
+  out.y1 = lerp(a.y1, b.y1, t);
+  out.w0 = lerp(a.w0, b.w0, t);
+  out.wMid = lerp(a.wMid, b.wMid, t);
+  out.w1 = lerp(a.w1, b.w1, t);
+  out.serifStart = lerp(a.serifStart ?? 0, b.serifStart ?? 0, t);
+  out.serifEnd = lerp(a.serifEnd ?? 0, b.serifEnd ?? 0, t);
+  out.alpha = lerp(a.alpha ?? 1, b.alpha ?? 1, t);
+  return out;
 }
 
 /**
  * Renders a smooth variable-width calligraphic Myeongjo brush stroke along a cubic Bézier spine.
+ * Zero heap allocations per call for locked 60/120fps rendering without frame drops.
  */
 function drawCalligStroke(
   ctx: CanvasRenderingContext2D,
@@ -188,37 +204,35 @@ function drawCalligStroke(
 
   const dxTotal = s.x1 - s.x0;
   const dyTotal = s.y1 - s.y0;
-  if (Math.hypot(dxTotal, dyTotal) < 0.8) return;
+  if (dxTotal * dxTotal + dyTotal * dyTotal < 0.64) return;
 
-  const steps = 24;
-  const leftPts: [number, number][] = [];
-  const rightPts: [number, number][] = [];
-
-  for (let i = 0; i <= steps; i++) {
-    const u = i / steps;
+  for (let i = 0; i <= STROKE_STEPS; i++) {
+    const u = i / STROKE_STEPS;
     const inv = 1 - u;
+    const inv2 = inv * inv;
+    const u2 = u * u;
 
     // Cubic Bézier point
     const x =
-      inv * inv * inv * s.x0 +
-      3 * inv * inv * u * s.cx1 +
-      3 * inv * u * u * s.cx2 +
-      u * u * u * s.x1;
+      inv2 * inv * s.x0 +
+      3 * inv2 * u * s.cx1 +
+      3 * inv * u2 * s.cx2 +
+      u2 * u * s.x1;
     const y =
-      inv * inv * inv * s.y0 +
-      3 * inv * inv * u * s.cy1 +
-      3 * inv * u * u * s.cy2 +
-      u * u * u * s.y1;
+      inv2 * inv * s.y0 +
+      3 * inv2 * u * s.cy1 +
+      3 * inv * u2 * s.cy2 +
+      u2 * u * s.y1;
 
     // Cubic Bézier tangent
     let tx =
-      3 * inv * inv * (s.cx1 - s.x0) +
+      3 * inv2 * (s.cx1 - s.x0) +
       6 * inv * u * (s.cx2 - s.cx1) +
-      3 * u * u * (s.x1 - s.cx2);
+      3 * u2 * (s.x1 - s.cx2);
     let ty =
-      3 * inv * inv * (s.cy1 - s.y0) +
+      3 * inv2 * (s.cy1 - s.y0) +
       6 * inv * u * (s.cy2 - s.cy1) +
-      3 * u * u * (s.y1 - s.cy2);
+      3 * u2 * (s.y1 - s.cy2);
 
     const len = Math.hypot(tx, ty) || 1;
     tx /= len;
@@ -229,25 +243,23 @@ function drawCalligStroke(
     const ny = tx;
 
     // Quadratic width interpolation: w0 -> wMid -> w1
-    const w =
-      inv * inv * s.w0 + 2 * inv * u * s.wMid + u * u * s.w1;
-    const hw = w * 0.5;
+    const hw = (inv2 * s.w0 + 2 * inv * u * s.wMid + u2 * s.w1) * 0.5;
 
-    leftPts.push([ox + (x + nx * hw) * scale, oy + (y + ny * hw) * scale]);
-    rightPts.push([ox + (x - nx * hw) * scale, oy + (y - ny * hw) * scale]);
+    LEFT_X[i] = ox + (x + nx * hw) * scale;
+    LEFT_Y[i] = oy + (y + ny * hw) * scale;
+    RIGHT_X[i] = ox + (x - nx * hw) * scale;
+    RIGHT_Y[i] = oy + (y - ny * hw) * scale;
   }
 
-  ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = '#0e0e0e';
 
   ctx.beginPath();
-  ctx.moveTo(leftPts[0][0], leftPts[0][1]);
-  for (let i = 1; i <= steps; i++) {
-    ctx.lineTo(leftPts[i][0], leftPts[i][1]);
+  ctx.moveTo(LEFT_X[0], LEFT_Y[0]);
+  for (let i = 1; i <= STROKE_STEPS; i++) {
+    ctx.lineTo(LEFT_X[i], LEFT_Y[i]);
   }
-  for (let i = steps; i >= 0; i--) {
-    ctx.lineTo(rightPts[i][0], rightPts[i][1]);
+  for (let i = STROKE_STEPS; i >= 0; i--) {
+    ctx.lineTo(RIGHT_X[i], RIGHT_Y[i]);
   }
   ctx.closePath();
   ctx.fill();
@@ -259,11 +271,12 @@ function drawCalligStroke(
     const ey = oy + s.y1 * scale;
     const sw = 10.5 * serifEnd * scale;
     const sh = 6.2 * serifEnd * scale;
+    const halfEndW = s.w1 * 0.45 * scale;
     ctx.beginPath();
-    ctx.moveTo(ex - sw, ey - s.w1 * 0.45 * scale);
-    ctx.lineTo(ex - sw * 0.28, ey - s.w1 * 0.45 * scale - sh);
-    ctx.lineTo(ex + 2.4 * serifEnd * scale, ey + s.w1 * 0.45 * scale);
-    ctx.lineTo(ex - sw, ey + s.w1 * 0.45 * scale);
+    ctx.moveTo(ex - sw, ey - halfEndW);
+    ctx.lineTo(ex - sw * 0.28, ey - halfEndW - sh);
+    ctx.lineTo(ex + 2.4 * serifEnd * scale, ey + halfEndW);
+    ctx.lineTo(ex - sw, ey + halfEndW);
     ctx.closePath();
     ctx.fill();
   }
@@ -282,8 +295,6 @@ function drawCalligStroke(
     ctx.closePath();
     ctx.fill();
   }
-
-  ctx.restore();
 }
 
 const prefersReducedMotion = () =>
@@ -297,20 +308,20 @@ const prefersReducedMotion = () =>
  */
 export const PrefaceStrokeMorph: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const labelsRef = useRef<HTMLDivElement | null>(null);
   const [manualTarget, setManualTarget] = useState<MorphTarget | null>(() =>
     prefersReducedMotion() ? 'gongAndJu' : null
   );
   const [displayPhase, setDisplayPhase] = useState<MorphTarget>(() =>
     prefersReducedMotion() ? 'gongAndJu' : 'gongju'
   );
-  const [labelOpacity, setLabelOpacity] = useState(() =>
-    prefersReducedMotion() ? 1 : 0
-  );
 
   const manualTargetRef = useRef<MorphTarget | null>(manualTarget);
+  const wakeupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     manualTargetRef.current = manualTarget;
+    wakeupRef.current?.();
   }, [manualTarget]);
 
   useEffect(() => {
@@ -322,6 +333,7 @@ export const PrefaceStrokeMorph: React.FC = () => {
     let width = 0;
     let height = 0;
     let rafId = 0;
+    let isRunning = false;
     let isVisible = false;
     let hasTriggeredAuto = prefersReducedMotion();
     let lastNow = performance.now();
@@ -330,78 +342,31 @@ export const PrefaceStrokeMorph: React.FC = () => {
     // morphs briskly into 共 · 主 (함께 공 / 주인 주), and stays there permanently.
     let autoTime = 0;
     let currentT = prefersReducedMotion() ? 1 : 0;
+    let lastDrawnT = -1;
     let lastReportedPhase: MorphTarget = currentT > 0.5 ? 'gongAndJu' : 'gongju';
-    let lastLabelBucket = -1;
-
-    const resize = () => {
-      const rect = canvas.getBoundingClientRect();
-      width = rect.width;
-      height = rect.height;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-
-    resize();
-    window.addEventListener('resize', resize);
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        isVisible = entry.isIntersecting;
-        if (entry.isIntersecting) {
-          hasTriggeredAuto = true;
-        }
-      },
-      { threshold: 0.25 }
-    );
-    observer.observe(canvas);
 
     // One-shot timings (seconds): brief hold on 公主 (0.75s) -> brisk morph (0.95s) -> stay on 共 · 主
     const T_HOLD_1 = 0.75;
     const T_MORPH_FWD = 0.95;
 
-    const render = (now: number) => {
-      rafId = window.requestAnimationFrame(render);
-      const dt = Math.min(0.05, (now - lastNow) / 1000);
-      lastNow = now;
+    const applyLabelStyle = (t: number) => {
+      const el = labelsRef.current;
+      if (!el) return;
+      const op = clamp01((t - 0.65) / 0.35);
+      el.style.opacity = op.toFixed(3);
+      el.style.transform = `translate3d(0, ${((1 - op) * 6).toFixed(2)}px, 0)`;
+    };
+
+    const drawFrame = (t: number) => {
       if (width <= 0 || height <= 0) return;
-      if (!isVisible && currentT !== 0 && currentT !== 1) return;
+      lastDrawnT = t;
 
-      const manual = manualTargetRef.current;
-      if (manual !== null) {
-        const goal = manual === 'gongAndJu' ? 1 : 0;
-        currentT += (goal - currentT) * Math.min(1, dt * 7.5);
-        if (Math.abs(goal - currentT) < 0.002) currentT = goal;
-      } else if (!prefersReducedMotion() && hasTriggeredAuto && currentT < 1) {
-        autoTime += dt;
-        if (autoTime < T_HOLD_1) {
-          currentT = 0;
-        } else {
-          currentT = clamp01((autoTime - T_HOLD_1) / T_MORPH_FWD);
-        }
-      }
-
-      // Sync UI tab indicator & sub-labels efficiently
-      const nextPhase: MorphTarget = currentT >= 0.5 ? 'gongAndJu' : 'gongju';
-      if (nextPhase !== lastReportedPhase) {
-        lastReportedPhase = nextPhase;
-        setDisplayPhase(nextPhase);
-      }
-
-      const rawLabelOp = clamp01((currentT - 0.65) / 0.35);
-      const bucket = Math.round(rawLabelOp * 25);
-      if (bucket !== lastLabelBucket) {
-        lastLabelBucket = bucket;
-        setLabelOpacity(rawLabelOp);
-      }
-
-      // Render crisp calligraphic strokes onto retina canvas
       ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = '#0e0e0e';
 
       const em = Math.min(height * 0.92, width * 0.38);
       const scale = em / 140;
-      const easedOverall = easeInOutQuart(clamp01(currentT));
+      const easedOverall = easeInOutQuart(clamp01(t));
 
       // Smoothly expand spacing from tight 公主 -> open 共   主
       const gapTight = em * 0.12;
@@ -413,23 +378,119 @@ export const PrefaceStrokeMorph: React.FC = () => {
       const topY = (height - em) * 0.5;
 
       // 1. Morphing left character: 公 -> 共 (per-stroke organic calligraphic stagger)
-      for (const pair of GONG_MORPH_STROKES) {
-        const localRaw = clamp01((currentT - pair.delay) / (1 - pair.delay));
+      for (let i = 0; i < GONG_MORPH_STROKES.length; i++) {
+        const pair = GONG_MORPH_STROKES[i];
+        const localRaw = clamp01((t - pair.delay) / (1 - pair.delay));
         const st = easeInOutQuart(localRaw);
-        const morphed = lerpStroke(pair.from, pair.to, st);
-        drawCalligStroke(ctx, morphed, leftX, topY, scale);
+        lerpStrokeInto(MORPH_SCRATCH, pair.from, pair.to, st);
+        drawCalligStroke(ctx, MORPH_SCRATCH, leftX, topY, scale);
       }
 
       // 2. Right character: 主 gliding smoothly into independent space
-      for (const s of JU_STROKES) {
-        drawCalligStroke(ctx, s, rightX, topY, scale);
+      ctx.globalAlpha = 1;
+      for (let i = 0; i < JU_STROKES.length; i++) {
+        drawCalligStroke(ctx, JU_STROKES[i], rightX, topY, scale);
       }
+
+      applyLabelStyle(t);
     };
 
-    rafId = window.requestAnimationFrame(render);
+    const stopLoop = () => {
+      if (rafId) {
+        window.cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+      isRunning = false;
+    };
+
+    const render = (now: number) => {
+      const dt = Math.min(0.033, Math.max(0, (now - lastNow) / 1000));
+      lastNow = now;
+
+      let settled = false;
+      const manual = manualTargetRef.current;
+
+      if (manual !== null) {
+        const goal = manual === 'gongAndJu' ? 1 : 0;
+        currentT += (goal - currentT) * (1 - Math.exp(-7.5 * dt));
+        if (Math.abs(goal - currentT) < 0.0015) {
+          currentT = goal;
+          settled = true;
+        }
+      } else if (!prefersReducedMotion() && hasTriggeredAuto && currentT < 1) {
+        if (isVisible) {
+          autoTime += dt;
+          if (autoTime < T_HOLD_1) {
+            currentT = 0;
+          } else {
+            currentT = clamp01((autoTime - T_HOLD_1) / T_MORPH_FWD);
+            if (currentT >= 1) settled = true;
+          }
+        }
+      } else {
+        settled = true;
+      }
+
+      const nextPhase: MorphTarget = currentT >= 0.5 ? 'gongAndJu' : 'gongju';
+      if (nextPhase !== lastReportedPhase) {
+        lastReportedPhase = nextPhase;
+        setDisplayPhase(nextPhase);
+      }
+
+      if (Math.abs(currentT - lastDrawnT) > 0.0001) {
+        drawFrame(currentT);
+      }
+
+      if (settled || (!isVisible && manual === null)) {
+        stopLoop();
+        return;
+      }
+
+      rafId = window.requestAnimationFrame(render);
+    };
+
+    const startLoop = () => {
+      if (isRunning) return;
+      isRunning = true;
+      lastNow = performance.now();
+      rafId = window.requestAnimationFrame(render);
+    };
+
+    wakeupRef.current = startLoop;
+
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawFrame(currentT);
+    };
+
+    resize();
+    window.addEventListener('resize', resize);
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isVisible = entry.isIntersecting;
+        if (entry.isIntersecting) {
+          hasTriggeredAuto = true;
+          if (manualTargetRef.current !== null || currentT < 1) {
+            startLoop();
+          }
+        } else if (manualTargetRef.current === null) {
+          stopLoop();
+        }
+      },
+      { threshold: 0.25 }
+    );
+    observer.observe(canvas);
 
     return () => {
-      window.cancelAnimationFrame(rafId);
+      wakeupRef.current = null;
+      stopLoop();
       observer.disconnect();
       window.removeEventListener('resize', resize);
     };
@@ -460,10 +521,14 @@ export const PrefaceStrokeMorph: React.FC = () => {
         <canvas ref={canvasRef} className="psm-callig__canvas" />
 
         <div
+          ref={labelsRef}
           className="psm-callig__labels"
           style={{
-            opacity: labelOpacity,
-            transform: `translateY(${(1 - labelOpacity) * 6}px)`,
+            opacity: prefersReducedMotion() ? 1 : 0,
+            transform: prefersReducedMotion()
+              ? 'translate3d(0, 0, 0)'
+              : 'translate3d(0, 6px, 0)',
+            willChange: 'opacity, transform',
           }}
         >
           <span>함께 공</span>
