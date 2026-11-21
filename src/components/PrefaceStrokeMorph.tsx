@@ -309,6 +309,8 @@ const prefersReducedMotion = () =>
 export const PrefaceStrokeMorph: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const labelsRef = useRef<HTMLDivElement | null>(null);
+  const leftLabelRef = useRef<HTMLSpanElement | null>(null);
+  const rightLabelRef = useRef<HTMLSpanElement | null>(null);
   const [manualTarget, setManualTarget] = useState<MorphTarget | null>(() =>
     prefersReducedMotion() ? 'gongAndJu' : null
   );
@@ -349,12 +351,23 @@ export const PrefaceStrokeMorph: React.FC = () => {
     const T_HOLD_1 = 1.0;
     const T_MORPH_FWD = 0.95;
 
-    const applyLabelStyle = (t: number) => {
+    const applyLabelStyle = (
+      t: number,
+      leftCenterX: number,
+      rightCenterX: number
+    ) => {
       const el = labelsRef.current;
-      if (!el) return;
-      const op = clamp01((t - 0.65) / 0.35);
-      el.style.opacity = op.toFixed(3);
-      el.style.transform = `translate3d(0, ${((1 - op) * 6).toFixed(2)}px, 0)`;
+      if (el) {
+        const op = clamp01((t - 0.65) / 0.35);
+        el.style.opacity = op.toFixed(3);
+        el.style.transform = `translate3d(0, ${((1 - op) * 6).toFixed(2)}px, 0)`;
+      }
+      if (leftLabelRef.current) {
+        leftLabelRef.current.style.transform = `translate3d(${leftCenterX.toFixed(2)}px, 0, 0) translateX(-50%)`;
+      }
+      if (rightLabelRef.current) {
+        rightLabelRef.current.style.transform = `translate3d(${rightCenterX.toFixed(2)}px, 0, 0) translateX(-50%)`;
+      }
     };
 
     const drawFrame = (t: number) => {
@@ -392,7 +405,8 @@ export const PrefaceStrokeMorph: React.FC = () => {
         drawCalligStroke(ctx, JU_STROKES[i], rightX, topY, scale);
       }
 
-      applyLabelStyle(t);
+      // Align Korean labels exactly to the optical centers of 共 and 主 (x = 70 in 140 em-box)
+      applyLabelStyle(t, leftX + em * 0.5, rightX + em * 0.5);
     };
 
     const stopLoop = () => {
@@ -531,8 +545,12 @@ export const PrefaceStrokeMorph: React.FC = () => {
             willChange: 'opacity, transform',
           }}
         >
-          <span>함께 공</span>
-          <span>주인 주</span>
+          <span ref={leftLabelRef} className="psm-callig__label">
+            함께 공
+          </span>
+          <span ref={rightLabelRef} className="psm-callig__label">
+            주인 주
+          </span>
         </div>
       </div>
 

@@ -682,14 +682,22 @@
 }
 
 .psm-callig__labels {
-  display: flex;
-  justify-content: space-between;
-  padding-inline: 2.3rem 2.6rem;
+  position: relative;
+  width: 100%;
+  height: 1.35rem;
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   color: #141414;
   will-change: opacity, transform;
+}
+
+.psm-callig__label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: nowrap;
+  will-change: transform;
 }
 
 .psm__controls {
