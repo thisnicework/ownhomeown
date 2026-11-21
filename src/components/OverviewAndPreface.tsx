@@ -50,9 +50,9 @@ export const OverviewAndPreface: React.FC = () => {
         }
         const rect = prefEl.getBoundingClientRect();
         const vh = window.innerHeight || 1;
-        // Smooth 0..1 progress as #preface scrolls through the comfortable reading window
-        const start = vh * 0.72;
-        const end = -Math.max(rect.height - vh * 0.65, vh * 0.25);
+        // Hold intact 公主 until #preface reaches the upper reading zone, then deconstruct as user reads down
+        const start = vh * 0.16;
+        const end = -Math.max(rect.height - vh * 0.58, vh * 0.42);
         const raw = (start - rect.top) / (start - end);
         setPrefaceProgress(clamp01(raw));
       }
@@ -71,10 +71,10 @@ export const OverviewAndPreface: React.FC = () => {
     setActiveGlyph((prev) => (prev === glyph ? null : glyph));
   };
 
-  // Deconstruction kinematics derived cleanly from scroll progress (0..1)
-  const swapT = clamp01((prefaceProgress - 0.18) / 0.36); // 公 -> 共 swap
-  const splitT = clamp01((prefaceProgress - 0.24) / 0.44); // 公主 -> 共   主 separation
-  const activeStage = prefaceProgress < 0.34 ? 0 : prefaceProgress < 0.68 ? 1 : 2;
+  // Deconstruction kinematics: keep 公主 intact on entry, then swap & split smoothly mid-read
+  const swapT = clamp01((prefaceProgress - 0.26) / 0.38); // 公 -> 共 swap
+  const splitT = clamp01((prefaceProgress - 0.32) / 0.44); // 公主 -> 共   主 separation
+  const activeStage = prefaceProgress < 0.32 ? 0 : prefaceProgress < 0.72 ? 1 : 2;
 
   return (
     <>
