@@ -1,0 +1,1633 @@
+/* ==========================================================================
+   ⟪공과 주⟫ 공共과 주主 — PDF Design System + Tactile Interactive Web Craft
+   Three flat surfaces ONLY: #808080 · #000000 · #FFFFFF
+   ========================================================================== */
+
+:root {
+  --ease-expo: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.app-shell {
+  min-height: 100vh;
+  overflow-x: clip;
+  background: var(--pdf-black);
+}
+
+/* --------------------------------------------------------------------------
+   Tactile Scroll Reveal System
+   -------------------------------------------------------------------------- */
+.reveal-block {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.85s var(--ease-expo), transform 0.85s var(--ease-expo);
+}
+
+.reveal-block.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* --------------------------------------------------------------------------
+   Exact PDF Typographic Wordmarks: 공共과 주主, 공主 2F, 주共 1F
+   -------------------------------------------------------------------------- */
+.pdf-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.pdf-wordmark--dark {
+  color: #161616;
+}
+
+.pdf-wordmark--light {
+  color: #ffffff;
+}
+
+.pdf-wordmark__unit {
+  display: inline-flex;
+  align-items: baseline;
+  position: relative;
+}
+
+.pdf-wordmark__ko {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.05em;
+  transition: transform 0.45s var(--ease-expo);
+}
+
+.pdf-wordmark__hanja {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 0.62em;
+  margin-left: -0.14em;
+  transform: translateY(0.14em);
+  transition: transform 0.45s var(--ease-expo), margin-left 0.45s var(--ease-expo),
+    opacity 0.35s ease;
+}
+
+.pdf-wordmark__conj {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.88em;
+  margin-inline: 0.08em 0.14em;
+  transition: opacity 0.35s ease, margin 0.45s var(--ease-expo);
+}
+
+/* Interactive Hero Wordmark Buttons */
+.pdf-glyph-btn {
+  display: inline-flex;
+  align-items: baseline;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: opacity 0.35s ease, transform 0.45s var(--ease-expo);
+}
+
+.pdf-glyph-btn:focus-visible {
+  outline: 1px solid #141414;
+  outline-offset: 6px;
+}
+
+.pdf-glyph-btn:hover .pdf-wordmark__hanja,
+.pdf-glyph-btn.is-active .pdf-wordmark__hanja {
+  margin-left: 0.04em;
+  transform: translateY(0.06em);
+}
+
+.pdf-cover-band__title.is-focus-gong .pdf-glyph-btn:not(.is-active),
+.pdf-cover-band__title.is-focus-ju .pdf-glyph-btn:not(.is-active),
+.pdf-cover-band__title.is-focus-gong .pdf-wordmark__conj,
+.pdf-cover-band__title.is-focus-ju .pdf-wordmark__conj {
+  opacity: 0.28;
+}
+
+.pdf-wordmark--nav {
+  font-size: 1.05rem;
+}
+
+.pdf-wordmark--md {
+  font-size: 2rem;
+}
+
+.pdf-wordmark--poster {
+  font-size: clamp(2.4rem, 4.4vw, 3.6rem);
+}
+
+.pdf-wordmark--cover {
+  font-size: clamp(3.1rem, 7.6vw, 6.2rem);
+}
+
+/* Floor Marks matching PDF Page 2 Center Top/Bottom */
+.pdf-floor-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22em;
+  line-height: 1;
+  user-select: none;
+}
+
+.pdf-floor-mark--dark {
+  color: #000000;
+}
+
+.pdf-floor-mark--light {
+  color: #ffffff;
+}
+
+.pdf-floor-mark__glyph {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding-left: 0.28em;
+}
+
+.pdf-floor-mark__hanja {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 1.7em;
+  line-height: 0.85;
+}
+
+.pdf-floor-mark__ko {
+  position: absolute;
+  left: 0;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.6em;
+  line-height: 1;
+}
+
+.pdf-floor-mark--2f .pdf-floor-mark__ko {
+  bottom: 0.24em;
+}
+
+.pdf-floor-mark--1f .pdf-floor-mark__ko {
+  top: 0.2em;
+}
+
+.pdf-floor-mark__lvl {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: 0.78em;
+  letter-spacing: -0.02em;
+}
+
+.pdf-floor-mark--sm {
+  font-size: 1rem;
+}
+
+.pdf-floor-mark--md {
+  font-size: 1.4rem;
+}
+
+.pdf-floor-mark--lg {
+  font-size: clamp(1.75rem, 2.6vw, 2.35rem);
+}
+
+/* --------------------------------------------------------------------------
+   Minimal Top Navigation + Hairline Scroll Thread
+   -------------------------------------------------------------------------- */
+.pdf-header {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  transition: background-color 0.3s ease;
+}
+
+.pdf-header.is-scrolled {
+  background: rgba(0, 0, 0, 0.96);
+}
+
+.pdf-header__inner {
+  height: var(--nav-height);
+  padding-inline: var(--pad-x);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.pdf-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.65rem;
+}
+
+.pdf-nav__link {
+  position: relative;
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.56);
+  padding-block: 0.25rem;
+  transition: color 0.25s ease;
+}
+
+.pdf-nav__link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 1px;
+  background: #ffffff;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s var(--ease-expo);
+}
+
+.pdf-nav__link:hover,
+.pdf-nav__link.is-active {
+  color: #ffffff;
+}
+
+.pdf-nav__link.is-active::after {
+  transform: scaleX(1);
+}
+
+.pdf-header__progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1.5px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.pdf-header__progress span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  transform-origin: left;
+  transition: transform 0.08s linear;
+}
+
+.pdf-header__menu-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 0.35rem;
+}
+
+/* Tactile Animated Mobile Drawer */
+.pdf-drawer {
+  position: fixed;
+  inset: var(--nav-height) 0 0 0;
+  z-index: 55;
+  background: var(--pdf-black);
+  padding: 2.25rem var(--pad-x) 2.5rem;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.35s var(--ease-expo), visibility 0.35s ease;
+}
+
+.pdf-drawer.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.pdf-drawer__inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.pdf-drawer__nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.pdf-drawer__link {
+  display: grid;
+  grid-template-columns: 2.25rem 1fr auto;
+  align-items: baseline;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.65);
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.4s var(--ease-expo), transform 0.4s var(--ease-expo),
+    color 0.2s ease;
+}
+
+.pdf-drawer.is-open .pdf-drawer__link {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.pdf-drawer__link.is-active {
+  color: #ffffff;
+}
+
+.pdf-drawer__num,
+.pdf-drawer__en {
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.pdf-drawer__label {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.pdf-drawer__footer {
+  padding-top: 1.5rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.pdf-drawer__footer p {
+  margin: 0 0 0.25rem;
+}
+
+/* --------------------------------------------------------------------------
+   Shared Minimal Typography Helpers
+   -------------------------------------------------------------------------- */
+.pdf-section-heading {
+  margin: 0 0 1.75rem;
+  font-size: clamp(1.1rem, 1.5vw, 1.3rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.pdf-section-heading--light {
+  color: var(--ink-on-dark);
+}
+
+.pdf-section-heading--dark {
+  color: var(--ink-on-light);
+}
+
+.pdf-plain-dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.pdf-plain-dl>div {
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  gap: 1rem;
+}
+
+.pdf-plain-dl dt {
+  font-weight: 600;
+}
+
+.pdf-plain-dl dd {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.pdf-plain-dl--light dt {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.pdf-plain-dl--light dd {
+  color: #f2f2f2;
+}
+
+.pdf-plain-dl--dark dt {
+  color: #555555;
+}
+
+.pdf-plain-dl--dark dd {
+  color: #141414;
+}
+
+.pdf-dl-sub {
+  font-size: 0.84rem;
+  opacity: 0.68;
+}
+
+.pdf-action-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: transparent;
+  border: none;
+  padding: 0 0 0.22rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 1px solid currentColor;
+  transition: opacity 0.2s ease, transform 0.25s var(--ease-expo);
+}
+
+.pdf-action-link:hover {
+  opacity: 0.62;
+  transform: translateY(-1px);
+}
+
+.pdf-action-link--light {
+  color: #ffffff;
+}
+
+.pdf-action-link--dark {
+  color: #000000;
+}
+
+/* --------------------------------------------------------------------------
+   01. 전시개요 — Monumental Silver-Grey & Black Architectural Hero
+   Derived directly from Official Poster 01 (cropped 共/主 + metallic silver light)
+   -------------------------------------------------------------------------- */
+.pdf-cover-band {
+  position: relative;
+  overflow: hidden;
+  min-height: clamp(620px, calc(100svh - var(--nav-height)), 920px);
+  background: var(--pdf-grey);
+  color: var(--ink-on-light);
+  display: grid;
+  place-items: center;
+  padding: clamp(9.5rem, 19vh, 13.5rem) var(--pad-x) clamp(9rem, 18vh, 13rem);
+  text-align: center;
+}
+
+/* Pure-Black Morphing Motion-Graphics Canvas */
+.pdf-hero-motion {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.pdf-cover-band__center {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: coverEnter 0.9s var(--ease-expo) both;
+}
+
+@keyframes coverEnter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pdf-cover-band__title {
+  margin: 0 0 0.85rem;
+  line-height: 1;
+}
+
+.pdf-cover-band__meaning {
+  min-height: 2.2rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 560px;
+}
+
+.pdf-meaning-kicker {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: rgba(20, 20, 20, 0.72);
+  font-variant-numeric: tabular-nums;
+}
+
+.pdf-meaning-line {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  letter-spacing: -0.015em;
+  color: #0d0d0d;
+  animation: fadeUpQuick 0.35s var(--ease-expo) both;
+}
+
+@keyframes fadeUpQuick {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pdf-cover-band__subtitle {
+  margin: 0 0 0.65rem;
+  font-size: clamp(0.95rem, 1.38vw, 1.14rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: #111111;
+}
+
+.pdf-cover-band__schedule,
+.pdf-cover-band__venue {
+  margin: 0;
+  font-size: clamp(0.83rem, 1.05vw, 0.92rem);
+  font-weight: 400;
+  line-height: 1.7;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: #1c1c1c;
+}
+
+/* Centered Kinetic Scroll Cue over the solid bottom black plinth */
+.pdf-scroll-cue {
+  position: absolute;
+  bottom: 1.15rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255, 255, 255, 0.78);
+  transition: color 0.25s ease;
+}
+
+.pdf-scroll-cue:hover {
+  color: #ffffff;
+}
+
+.pdf-scroll-cue__label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+}
+
+.pdf-scroll-cue__line {
+  position: relative;
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.28);
+  overflow: hidden;
+}
+
+.pdf-scroll-cue__line::after {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  animation: scrollDrop 2.2s var(--ease-expo) infinite;
+}
+
+@keyframes scrollDrop {
+  0% {
+    top: -100%;
+  }
+
+  50% {
+    top: 0%;
+  }
+
+  100% {
+    top: 100%;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   02. 전시서문 (기획의도) — PDF Page 1 Left Panel + Staggered Choreography
+   -------------------------------------------------------------------------- */
+.pdf-preface-band {
+  position: relative;
+  background: var(--pdf-grey);
+  color: var(--ink-on-light);
+  border-top: 1px solid rgba(0, 0, 0, 0.14);
+  padding: clamp(5rem, 9vw, 8.5rem) var(--pad-x);
+}
+
+.pdf-preface-band__black-notch {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: clamp(64px, 9.5vw, 136px);
+  height: clamp(130px, 26%, 240px);
+  background: var(--pdf-black);
+  pointer-events: none;
+}
+
+.pdf-preface-band__inner {
+  position: relative;
+  z-index: 1;
+  max-width: 1040px;
+  margin-inline: auto;
+  padding-right: clamp(0px, 6vw, 80px);
+  display: grid;
+  grid-template-columns: minmax(220px, 0.72fr) minmax(0, 1.28fr);
+  gap: clamp(2.5rem, 6vw, 5.5rem);
+  align-items: start;
+}
+
+.pdf-preface-band__origin {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.75;
+  color: #1d1d1d;
+  padding-top: 0.3rem;
+}
+
+.pdf-preface-band__heading {
+  margin: 0 0 2rem;
+  font-size: clamp(1.15rem, 1.6vw, 1.35rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.pdf-preface-band__sublabel {
+  font-size: 0.82rem;
+  font-weight: 400;
+  opacity: 0.65;
+}
+
+.pdf-preface-band__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.55rem;
+  max-width: 34em;
+}
+
+.pdf-preface-band__body p {
+  margin: 0;
+  font-size: clamp(0.96rem, 1.18vw, 1.04rem);
+  line-height: 1.94;
+  letter-spacing: -0.018em;
+  color: #141414;
+}
+
+/* Staggered Typographic Reveal */
+.pdf-preface-band__stagger {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  font-size: clamp(1rem, 1.3vw, 1.12rem);
+  line-height: 1.85;
+  color: #141414;
+}
+
+.pdf-preface-band__stagger span {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.8s var(--ease-expo), transform 0.8s var(--ease-expo);
+}
+
+.pdf-preface-band__stagger.is-visible span {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.pdf-stagger-1 {
+  align-self: flex-start;
+  transition-delay: 0ms;
+}
+
+.pdf-stagger-2 {
+  align-self: flex-start;
+  padding-left: clamp(3rem, 12vw, 9.5rem);
+  transition-delay: 180ms;
+}
+
+.pdf-stagger-3 {
+  align-self: flex-start;
+  margin-top: 0.45rem;
+  transition-delay: 360ms;
+}
+
+/* --------------------------------------------------------------------------
+   03. 포스터 — Gallery Wall Diptych (2종 나란히 전시)
+   -------------------------------------------------------------------------- */
+.pdf-poster-band {
+  background: var(--pdf-black);
+  color: var(--ink-on-dark);
+  padding: clamp(5rem, 9vw, 8.5rem) var(--pad-x);
+}
+
+.pdf-diptych-container {
+  max-width: 1180px;
+  margin-inline: auto;
+}
+
+.pdf-diptych-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: clamp(2.25rem, 4.5vw, 3.5rem);
+}
+
+.pdf-diptych-header .pdf-section-heading {
+  margin-bottom: 0;
+}
+
+.pdf-diptych-header__meta {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.pdf-diptych {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(2rem, 5vw, 4.75rem);
+  align-items: start;
+}
+
+.pdf-diptych__item {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  transition: opacity 0.45s var(--ease-expo), transform 0.45s var(--ease-expo);
+}
+
+.pdf-diptych__item.is-dimmed {
+  opacity: 0.42;
+  transform: scale(0.992);
+}
+
+.pdf-diptych__item.is-focused {
+  transform: translateY(-4px);
+}
+
+.pdf-diptych__frame {
+  position: relative;
+  width: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.55s var(--ease-expo);
+  will-change: transform;
+}
+
+.pdf-diptych__frame.is-tilting {
+  transition: transform 0.12s ease-out;
+}
+
+.pdf-diptych__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.pdf-poster-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  transition: opacity 0.35s ease;
+}
+
+.pdf-text-tab {
+  position: relative;
+  background: transparent;
+  border: none;
+  padding: 0 0 0.3rem;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.25s ease;
+}
+
+.pdf-text-tab::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: #ffffff;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s var(--ease-expo);
+}
+
+.pdf-text-tab:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.pdf-text-tab.is-active {
+  color: #ffffff;
+}
+
+.pdf-text-tab.is-active::after {
+  transform: scaleX(1);
+}
+
+/* --------------------------------------------------------------------------
+   04. 작품 — PDF Page 2 Spread + Spatial Synchronization & Responsive Floor Tabs
+   -------------------------------------------------------------------------- */
+.pdf-spread-wrap {
+  position: relative;
+  width: 100%;
+}
+
+/* Mobile/Tablet Sticky Floor Switcher (Hidden on Desktop 3-Column Spread) */
+.pdf-floor-switcher {
+  display: none;
+  position: sticky;
+  top: var(--nav-height);
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 0.65rem var(--pad-x);
+  gap: 1.25rem;
+  overflow-x: auto;
+}
+
+.pdf-floor-switcher__btn {
+  position: relative;
+  background: transparent;
+  border: none;
+  padding: 0.25rem 0;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.pdf-floor-switcher__btn::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 1.5px;
+  background: #ffffff;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s var(--ease-expo);
+}
+
+.pdf-floor-switcher__btn.is-active {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.pdf-floor-switcher__btn.is-active::after {
+  transform: scaleX(1);
+}
+
+.pdf-spread {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+}
+
+.pdf-spread__col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.pdf-spread__col--white {
+  background: var(--pdf-white);
+  color: var(--ink-on-light);
+  padding: clamp(3rem, 5vw, 5.5rem) clamp(1.5rem, 3.4vw, 3.6rem);
+  gap: clamp(3.5rem, 6vw, 6rem);
+}
+
+.pdf-spread__col--black {
+  background: var(--pdf-black);
+  color: var(--ink-on-dark);
+  padding: clamp(3rem, 5vw, 5.5rem) clamp(1.5rem, 3.4vw, 3.6rem);
+  gap: clamp(3.5rem, 6vw, 6rem);
+}
+
+.pdf-spread__col--plans {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+}
+
+.pdf-spread__plan-half {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(2rem, 3.5vw, 3.5rem) clamp(1.25rem, 2.5vw, 2.5rem);
+}
+
+.pdf-spread__plan-half--2f {
+  background: var(--pdf-black);
+  color: var(--pdf-white);
+}
+
+.pdf-spread__plan-half--1f {
+  background: var(--pdf-white);
+  color: var(--pdf-black);
+}
+
+.pdf-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pdf-plan__mark {
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 0.5rem;
+}
+
+.pdf-plan__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.pdf-plan__zone {
+  cursor: pointer;
+}
+
+.pdf-plan__zone-area {
+  transition: fill 0.3s ease;
+}
+
+.pdf-plan__badge {
+  transition: opacity 0.25s ease, transform 0.25s var(--ease-expo);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.pdf-plan__zone:hover .pdf-plan__badge,
+.pdf-plan__zone.is-active .pdf-plan__badge {
+  transform: scale(1.06);
+}
+
+.pdf-plan__zone:focus-visible {
+  outline: 2px solid currentColor;
+}
+
+/* Synchronized Focus / Dimming on Section Blocks */
+.pdf-sec-block {
+  scroll-margin-top: calc(var(--nav-height) + 4rem);
+  transition: opacity 0.35s var(--ease-expo), transform 0.35s var(--ease-expo);
+}
+
+.pdf-sec-block.is-dimmed {
+  opacity: 0.42;
+}
+
+.pdf-sec-block.is-highlighted {
+  transform: translateX(6px);
+}
+
+.pdf-sec-block__title {
+  margin: 0 0 1.4rem;
+  font-size: clamp(1rem, 1.25vw, 1.15rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.pdf-sec-block__intro {
+  margin-bottom: 1.6rem;
+}
+
+.pdf-sec-block__intro p,
+.pdf-sec-block__desc p {
+  margin: 0 0 0.85rem;
+  font-size: 0.91rem;
+  line-height: 1.82;
+}
+
+.pdf-sec-block__intro p:last-child,
+.pdf-sec-block__desc p:last-child {
+  margin-bottom: 0;
+}
+
+.pdf-sec-block__work {
+  margin: 0 0 1rem;
+  font-size: 0.94rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.pdf-sec-block--light .pdf-sec-block__intro p,
+.pdf-sec-block--light .pdf-sec-block__desc p {
+  color: #1c1c1c;
+}
+
+.pdf-sec-block--dark .pdf-sec-block__intro p,
+.pdf-sec-block--dark .pdf-sec-block__desc p {
+  color: #e4e4e4;
+}
+
+/* Subtle Participant Disclosure inside each Work */
+.pdf-sec-block__meta {
+  margin-top: 1.35rem;
+}
+
+.pdf-sec-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  opacity: 0.55;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.pdf-sec-toggle:hover {
+  opacity: 1;
+}
+
+.pdf-sec-toggle__icon {
+  transition: transform 0.3s var(--ease-expo);
+}
+
+.pdf-sec-toggle__icon.is-open {
+  transform: rotate(180deg);
+}
+
+.pdf-sec-artists {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.38s var(--ease-expo);
+}
+
+.pdf-sec-artists.is-open {
+  grid-template-rows: 1fr;
+}
+
+.pdf-sec-artists__inner {
+  overflow: hidden;
+}
+
+.pdf-sec-artists__inner p {
+  margin: 0.7rem 0 0.35rem;
+  font-size: 0.81rem;
+  line-height: 1.7;
+  opacity: 0.8;
+}
+
+.pdf-sec-artists__inner small {
+  display: block;
+  font-size: 0.76rem;
+  opacity: 0.58;
+}
+
+/* --------------------------------------------------------------------------
+   05. 크레딧 — Pure Black + Diagonal Grey Wedge + Spotlight Hover
+   -------------------------------------------------------------------------- */
+.pdf-credits-band {
+  position: relative;
+  overflow: hidden;
+  background: var(--pdf-black);
+  color: var(--ink-on-dark);
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  padding: clamp(6.5rem, 10vw, 9.5rem) var(--pad-x) clamp(5rem, 9vw, 8.5rem);
+}
+
+.pdf-credits-band__wedge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: clamp(160px, 24vw, 340px);
+  height: clamp(80px, 7.2vw, 112px);
+  background: var(--pdf-grey);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%, 34% 0);
+  pointer-events: none;
+}
+
+.pdf-credits-band__container {
+  position: relative;
+  z-index: 1;
+  max-width: 1240px;
+  margin-inline: auto;
+}
+
+.pdf-credits-toolbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 3rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.pdf-credits-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+}
+
+.pdf-credits-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pdf-credits-search input {
+  width: 170px;
+  padding: 0.25rem 1.4rem 0.3rem 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  font-size: 0.82rem;
+  transition: border-color 0.25s ease, width 0.35s var(--ease-expo);
+}
+
+.pdf-credits-search input::placeholder {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.pdf-credits-search input:focus {
+  outline: none;
+  border-bottom-color: #ffffff;
+  width: 220px;
+}
+
+.pdf-credits-search__clear {
+  position: absolute;
+  right: 0;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  padding: 0.2rem;
+  display: inline-flex;
+}
+
+.pdf-credits-band__inner {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(2.5rem, 4.5vw, 4.5rem);
+  align-items: start;
+}
+
+.pdf-credits-band__inner.is-single-col {
+  grid-template-columns: minmax(0, 620px);
+}
+
+.pdf-credits-col {
+  min-width: 0;
+}
+
+.pdf-credits-title {
+  margin: 0 0 1.65rem;
+  font-size: 0.96rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+}
+
+.pdf-credits-subhead {
+  margin: 0 0 0.75rem;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.pdf-credits-subhead--spaced {
+  margin-top: 1.85rem;
+}
+
+.pdf-credits-dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+
+.pdf-credits-dl--spaced {
+  margin-top: 1.5rem;
+}
+
+/* Subtle Editorial Row Spotlight Hover */
+.pdf-credits-row {
+  display: grid;
+  grid-template-columns: 108px 1fr;
+  gap: 0.85rem;
+  transition: opacity 0.25s ease, transform 0.25s var(--ease-expo);
+}
+
+.pdf-credits-dl:hover .pdf-credits-row {
+  opacity: 0.46;
+}
+
+.pdf-credits-dl:hover .pdf-credits-row:hover {
+  opacity: 1;
+  transform: translateX(4px);
+}
+
+.pdf-credits-row--wide-dt {
+  grid-template-columns: 196px 1fr;
+}
+
+.pdf-credits-row--section {
+  margin-top: 0.65rem;
+}
+
+.pdf-credits-row--section dt {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.pdf-credits-row dt {
+  color: rgba(255, 255, 255, 0.74);
+  font-weight: 400;
+}
+
+.pdf-credits-row dd {
+  margin: 0;
+  color: #f0f0f0;
+}
+
+.pdf-credits-empty {
+  padding: 2.5rem 0;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.9rem;
+}
+
+/* --------------------------------------------------------------------------
+   06. 관람안내 — Pure White (#FFFFFF) + Smooth Accordion Guidelines
+   -------------------------------------------------------------------------- */
+.pdf-visit-band {
+  background: var(--pdf-white);
+  color: var(--ink-on-light);
+  padding: var(--pad-y) var(--pad-x);
+}
+
+.pdf-visit-band__inner {
+  max-width: 1120px;
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: minmax(280px, 0.92fr) minmax(0, 1.08fr);
+  gap: clamp(2.75rem, 6vw, 6rem);
+  align-items: start;
+}
+
+.pdf-visit-links {
+  margin-top: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.4rem;
+}
+
+.pdf-visit-subhead {
+  margin: 0 0 1.4rem;
+  font-size: clamp(1rem, 1.3vw, 1.15rem);
+  font-weight: 700;
+}
+
+.pdf-visit-notes {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid rgba(0, 0, 0, 0.14);
+}
+
+.pdf-visit-note {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.14);
+}
+
+.pdf-visit-note__trigger {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 2rem 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.1rem 0;
+  background: transparent;
+  border: none;
+  color: #111111;
+  text-align: left;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.pdf-visit-note__trigger:hover {
+  opacity: 0.65;
+}
+
+.pdf-visit-note__num {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #707070;
+}
+
+.pdf-visit-note__title {
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.pdf-visit-note__chevron {
+  transition: transform 0.35s var(--ease-expo);
+  color: #555555;
+}
+
+.pdf-visit-note.is-open .pdf-visit-note__chevron {
+  transform: rotate(180deg);
+}
+
+.pdf-visit-note__body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.38s var(--ease-expo);
+}
+
+.pdf-visit-note.is-open .pdf-visit-note__body {
+  grid-template-rows: 1fr;
+}
+
+.pdf-visit-note__body-inner {
+  overflow: hidden;
+}
+
+.pdf-visit-note__body-inner p {
+  margin: 0 0 1.25rem 2.6rem;
+  font-size: 0.89rem;
+  line-height: 1.82;
+  color: #2b2b2b;
+}
+
+/* --------------------------------------------------------------------------
+   07. 스폰서 — Flat Grey (#808080) + Tactile Row Hover
+   -------------------------------------------------------------------------- */
+.pdf-sponsors-band {
+  background: var(--pdf-grey);
+  color: var(--ink-on-light);
+  padding: var(--pad-y) var(--pad-x);
+}
+
+.pdf-sponsors-band__inner {
+  max-width: 1120px;
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: minmax(240px, 0.72fr) minmax(0, 1.28fr);
+  gap: clamp(2rem, 6vw, 5.5rem);
+  align-items: start;
+}
+
+.pdf-sponsors-band__note {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #1f1f1f;
+}
+
+.pdf-sponsors-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pdf-sponsor-row {
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  gap: 1rem;
+  padding-block: 1.3rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.18);
+  transition: transform 0.3s var(--ease-expo), border-color 0.25s ease;
+}
+
+.pdf-sponsor-row:first-child {
+  padding-top: 0;
+}
+
+.pdf-sponsor-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.pdf-sponsor-row:hover {
+  transform: translateX(6px);
+  border-bottom-color: rgba(0, 0, 0, 0.45);
+}
+
+.pdf-sponsor-row dt {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1d1d1d;
+}
+
+.pdf-sponsor-row dd {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.pdf-sponsor-row dd strong {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0e0e0e;
+}
+
+.pdf-sponsor-row__en {
+  font-size: 0.76rem;
+  letter-spacing: 0.05em;
+  color: #242424;
+}
+
+.pdf-sponsor-row__desc {
+  font-size: 0.86rem;
+  color: #1a1a1a;
+  margin-top: 0.15rem;
+}
+
+/* --------------------------------------------------------------------------
+   Minimal Pure Black Footer
+   -------------------------------------------------------------------------- */
+.pdf-footer {
+  background: var(--pdf-black);
+  color: var(--ink-on-dark);
+  padding: 1.85rem var(--pad-x);
+}
+
+.pdf-footer__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.pdf-footer__meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.pdf-footer__top {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  transition: color 0.2s ease, transform 0.25s var(--ease-expo);
+}
+
+.pdf-footer__top:hover {
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Layout
+   -------------------------------------------------------------------------- */
+@media (max-width: 1120px) {
+  .pdf-floor-switcher {
+    display: flex;
+  }
+
+  .pdf-spread {
+    grid-template-columns: 1fr;
+  }
+
+  .pdf-spread__col--plans {
+    order: -1;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+  }
+
+  /* Responsive Floor Filtering on Tablet & Mobile */
+  .pdf-spread-wrap--filter-1f .pdf-spread__col--black,
+  .pdf-spread-wrap--filter-1f .pdf-spread__plan-half--2f {
+    display: none;
+  }
+
+  .pdf-spread-wrap--filter-1f .pdf-spread__col--plans,
+  .pdf-spread-wrap--filter-2f .pdf-spread__col--plans {
+    grid-template-columns: 1fr;
+  }
+
+  .pdf-spread-wrap--filter-2f .pdf-spread__col--white,
+  .pdf-spread-wrap--filter-2f .pdf-spread__plan-half--1f {
+    display: none;
+  }
+
+  .pdf-credits-band__inner {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+
+  .pdf-credits-band__wedge {
+    width: 140px;
+    height: 76px;
+  }
+}
+
+@media (max-width: 860px) {
+  .pdf-nav {
+    display: none;
+  }
+
+  .pdf-header__menu-btn {
+    display: inline-flex;
+  }
+
+  .pdf-preface-band__inner,
+  .pdf-diptych,
+  .pdf-visit-band__inner,
+  .pdf-sponsors-band__inner,
+  .pdf-spread__col--plans {
+    grid-template-columns: 1fr;
+  }
+
+  .pdf-preface-band__inner {
+    padding-right: 0;
+  }
+
+  .pdf-preface-band__black-notch {
+    width: 64px;
+    height: 96px;
+  }
+
+  .pdf-stagger-2 {
+    padding-left: 2.25rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .pdf-wordmark--cover {
+    font-size: clamp(2.45rem, 11vw, 3.3rem);
+  }
+
+  .pdf-credits-row,
+  .pdf-credits-row--wide-dt,
+  .pdf-plain-dl>div,
+  .pdf-sponsor-row {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+
+  .pdf-credits-search input,
+  .pdf-credits-search input:focus {
+    width: 100%;
+  }
+
+  .pdf-credits-search {
+    width: 100%;
+  }
+
+  .pdf-visit-note__body-inner p {
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .reveal-block,
+  .pdf-preface-band__stagger span {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .pdf-scroll-cue__line::after {
+    animation: none;
+  }
+}
