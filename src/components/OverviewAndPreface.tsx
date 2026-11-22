@@ -52,6 +52,7 @@ export const OverviewAndPreface: React.FC = () => {
         ref={heroRef}
         className={`pdf-cover-band ${activeGlyph ? `is-hero-${activeGlyph}` : ''}`}
         aria-label="전시개요"
+        onClick={() => setActiveGlyph(null)}
       >
         <HeroMotionForms activeGlyph={activeGlyph} scrollRatio={scrollRatio} />
 
@@ -69,9 +70,16 @@ export const OverviewAndPreface: React.FC = () => {
               <button
                 type="button"
                 className={`pdf-glyph-btn ${activeGlyph === 'gong' ? 'is-active' : ''}`}
-                onMouseEnter={() => setActiveGlyph('gong')}
-                onMouseLeave={() => setActiveGlyph(null)}
-                onClick={() => toggleGlyph('gong')}
+                onPointerEnter={(e) => {
+                  if (e.pointerType === 'mouse') setActiveGlyph('gong');
+                }}
+                onPointerLeave={(e) => {
+                  if (e.pointerType === 'mouse') setActiveGlyph(null);
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleGlyph('gong');
+                }}
                 aria-pressed={activeGlyph === 'gong'}
                 aria-label="공(共) 의미 보기"
               >
@@ -88,9 +96,16 @@ export const OverviewAndPreface: React.FC = () => {
               <button
                 type="button"
                 className={`pdf-glyph-btn ${activeGlyph === 'ju' ? 'is-active' : ''}`}
-                onMouseEnter={() => setActiveGlyph('ju')}
-                onMouseLeave={() => setActiveGlyph(null)}
-                onClick={() => toggleGlyph('ju')}
+                onPointerEnter={(e) => {
+                  if (e.pointerType === 'mouse') setActiveGlyph('ju');
+                }}
+                onPointerLeave={(e) => {
+                  if (e.pointerType === 'mouse') setActiveGlyph(null);
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleGlyph('ju');
+                }}
                 aria-pressed={activeGlyph === 'ju'}
                 aria-label="주(主) 의미 보기"
               >

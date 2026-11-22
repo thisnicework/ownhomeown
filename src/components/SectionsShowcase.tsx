@@ -114,8 +114,12 @@ export const SectionsShowcase: React.FC = () => {
         className={`pdf-sec-block pdf-sec-block--${theme} ${
           isActive ? 'is-highlighted' : ''
         } ${isDimmed ? 'is-dimmed' : ''}`}
-        onMouseEnter={() => setActiveSection(sec.id)}
-        onMouseLeave={() => setActiveSection(null)}
+        onPointerEnter={(e) => {
+          if (e.pointerType === 'mouse') setActiveSection(sec.id);
+        }}
+        onPointerLeave={(e) => {
+          if (e.pointerType === 'mouse') setActiveSection(null);
+        }}
       >
         <h2 className="pdf-sec-block__title">{sec.headerTitle}</h2>
 

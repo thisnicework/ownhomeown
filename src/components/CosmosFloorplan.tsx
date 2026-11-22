@@ -123,8 +123,12 @@ export const CosmosFloorplan: React.FC<CosmosFloorplanProps> = ({
           <g
             className={`pdf-plan__zone ${activeSection === 'section-1' ? 'is-active' : ''}`}
             onClick={() => handleSelect('section-1')}
-            onMouseEnter={() => onHoverSection?.('section-1')}
-            onMouseLeave={() => onHoverSection?.(null)}
+            onPointerEnter={(e) => {
+              if (e.pointerType === 'mouse') onHoverSection?.('section-1');
+            }}
+            onPointerLeave={(e) => {
+              if (e.pointerType === 'mouse') onHoverSection?.(null);
+            }}
             role="button"
             tabIndex={0}
             aria-label="SECTION 1 FILM ROOM 보기"
@@ -165,8 +169,12 @@ export const CosmosFloorplan: React.FC<CosmosFloorplanProps> = ({
           <g
             className={`pdf-plan__zone ${activeSection === 'section-2' ? 'is-active' : ''}`}
             onClick={() => handleSelect('section-2')}
-            onMouseEnter={() => onHoverSection?.('section-2')}
-            onMouseLeave={() => onHoverSection?.(null)}
+            onPointerEnter={(e) => {
+              if (e.pointerType === 'mouse') onHoverSection?.('section-2');
+            }}
+            onPointerLeave={(e) => {
+              if (e.pointerType === 'mouse') onHoverSection?.(null);
+            }}
             role="button"
             tabIndex={0}
             aria-label="SECTION 2 재조립 허물기 보기"
@@ -237,8 +245,12 @@ export const CosmosFloorplan: React.FC<CosmosFloorplanProps> = ({
           <g
             className={`pdf-plan__zone ${activeSection === 'section-3' ? 'is-active' : ''}`}
             onClick={() => handleSelect('section-3')}
-            onMouseEnter={() => onHoverSection?.('section-3')}
-            onMouseLeave={() => onHoverSection?.(null)}
+            onPointerEnter={(e) => {
+              if (e.pointerType === 'mouse') onHoverSection?.('section-3');
+            }}
+            onPointerLeave={(e) => {
+              if (e.pointerType === 'mouse') onHoverSection?.(null);
+            }}
             role="button"
             tabIndex={0}
             aria-label="SECTION 3 재조립 짓기 보기"
@@ -275,8 +287,12 @@ export const CosmosFloorplan: React.FC<CosmosFloorplanProps> = ({
           <g
             className={`pdf-plan__zone ${activeSection === 'section-4' ? 'is-active' : ''}`}
             onClick={() => handleSelect('section-4')}
-            onMouseEnter={() => onHoverSection?.('section-4')}
-            onMouseLeave={() => onHoverSection?.(null)}
+            onPointerEnter={(e) => {
+              if (e.pointerType === 'mouse') onHoverSection?.('section-4');
+            }}
+            onPointerLeave={(e) => {
+              if (e.pointerType === 'mouse') onHoverSection?.(null);
+            }}
             role="button"
             tabIndex={0}
             aria-label="SECTION 4 공동의 집 응답하기 보기"
