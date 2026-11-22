@@ -12,8 +12,8 @@ type Pt = [number, number];
 interface MonolithPose {
   /** Strictly monotonic 15-point outer contour (guarantees glitch-free morphing) */
   edge: Pt[];
-  /** Diagonal #808080 counter cutout anchored cleanly inside solid black mass */
-  counter: [Pt, Pt, Pt, Pt];
+  /** Counter horizontal span & slant [cx, cw, slant] */
+  counterSpec: [number, number, number];
 }
 
 function clamp(v: number, min: number, max: number): number {
@@ -28,21 +28,19 @@ function rand(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-function easeInOutCubic(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+function easeInOutQuart(t: number): number {
+  return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
 }
 
 function mirrorPose(pose: MonolithPose): MonolithPose {
   const edge: Pt[] = [...pose.edge]
     .reverse()
     .map(([x, y]) => [1 - x, y]);
-  const counter = pose.counter.map(([x, y]) => [1 - x, y] as Pt) as [
-    Pt,
-    Pt,
-    Pt,
-    Pt,
-  ];
-  return { edge, counter };
+  const [cx, cw, slant] = pose.counterSpec;
+  return {
+    edge,
+    counterSpec: [1 - cx - cw, cw, -slant],
+  };
 }
 
 /**
@@ -72,8 +70,8 @@ function extremeEdgeY(
   xEnd: number,
   mode: 'min' | 'max'
 ): number {
-  let result = mode === 'min' ? 1 : 0;
-  const steps = 12;
+  let result = mode === 'min' ? 1.5 : -0.5;
+  const steps = 14;
   for (let s = 0; s <= steps; s++) {
     const sx = xStart + ((xEnd - xStart) * s) / steps;
     const sy = sampleEdgeY(edge, clamp01(sx));
@@ -88,31 +86,73 @@ function extremeEdgeY(
 }
 
 /**
- * Generates a unique, glitch-free Poster-01 style TOP black display-type silhouette.
- * Enforces generous minimum black ink bridge thickness everywhere (never pinches thin).
+ * Generates high-contrast, dramatically shifting Poster-01 / Poster-02 TOP silhouettes.
+ * Alternating `variant` indices invert peaks and deep bays for radical, sculptural motion.
  */
-function generateTopPose(flipped: boolean): MonolithPose {
-  const x1 = rand(0.03, 0.08);
-  const x2 = x1 + rand(0.08, 0.13);
-  const x3 = x2 + rand(0.06, 0.1);
-  const x4 = x3 + rand(0.09, 0.13);
-  const x5 = x4 + rand(0.09, 0.13);
-  const x6 = x5 + rand(0.07, 0.1);
-  const x7 = x6 + rand(0.07, 0.11);
-  const x8 = clamp(x7 + rand(0.11, 0.16), 0.68, 0.8);
-  const x9 = clamp(x8 + rand(0.09, 0.13), 0.82, 0.92);
+function generateTopPose(flipped: boolean, variant: number): MonolithPose {
+  const mode = variant % 3;
 
-  const leftDrop = rand(0.84, 0.98);
-  const midShelf = rand(0.56, 0.72);
-  const midProng = rand(0.84, 0.98);
-  const notchUp = rand(0.62, 0.78);
-  const rightProng = rand(0.86, 0.99);
-  const deepBay = rand(0.28, 0.42);
-  const farRightDrop = rand(0.8, 0.96);
+  const x1 =
+    mode === 0
+      ? rand(0.02, 0.06)
+      : mode === 1
+        ? rand(0.09, 0.15)
+        : rand(0.04, 0.1);
+  const x2 = x1 + (mode === 1 ? rand(0.11, 0.17) : rand(0.06, 0.11));
+  const x3 = x2 + rand(0.05, 0.11);
+  const x4 = x3 + (mode === 0 ? rand(0.11, 0.16) : rand(0.06, 0.11));
+  const x5 = x4 + (mode === 2 ? rand(0.11, 0.16) : rand(0.07, 0.12));
+  const x6 = x5 + rand(0.06, 0.11);
+  const x7 = x6 + rand(0.06, 0.11);
+  const x8 = clamp(x7 + rand(0.09, 0.16), 0.64, 0.82);
+  const x9 = clamp(x8 + rand(0.08, 0.14), 0.8, 0.94);
+
+  const leftDrop =
+    mode === 0
+      ? rand(0.98, 1.15)
+      : mode === 1
+        ? rand(0.38, 0.56)
+        : rand(0.84, 1.04);
+  const midShelf =
+    mode === 0
+      ? rand(0.36, 0.54)
+      : mode === 1
+        ? rand(0.94, 1.12)
+        : rand(0.46, 0.64);
+  const midProng =
+    mode === 0
+      ? rand(0.94, 1.14)
+      : mode === 1
+        ? rand(0.72, 0.88)
+        : rand(1.0, 1.16);
+  const notchUp =
+    mode === 0
+      ? rand(0.7, 0.86)
+      : mode === 1
+        ? rand(0.44, 0.62)
+        : rand(0.74, 0.9);
+  const rightProng =
+    mode === 0
+      ? rand(0.82, 0.98)
+      : mode === 1
+        ? rand(0.98, 1.15)
+        : rand(0.76, 0.94);
+  const deepBay =
+    mode === 0
+      ? rand(0.2, 0.36)
+      : mode === 1
+        ? rand(0.46, 0.64)
+        : rand(0.18, 0.32);
+  const farRightDrop =
+    mode === 0
+      ? rand(0.74, 0.94)
+      : mode === 1
+        ? rand(0.96, 1.14)
+        : rand(0.88, 1.08);
 
   const edge: Pt[] = [
-    [0.0, rand(0.42, 0.6)],
-    [x1, rand(0.32, 0.48)],
+    [0.0, mode === 1 ? rand(0.68, 0.92) : rand(0.28, 0.52)],
+    [x1, mode === 1 ? rand(0.56, 0.78) : rand(0.22, 0.42)],
     [x1, leftDrop],
     [x2, leftDrop],
     [x3, midShelf],
@@ -121,87 +161,126 @@ function generateTopPose(flipped: boolean): MonolithPose {
     [x5, midProng],
     [x6, notchUp],
     [x7, rightProng],
-    [x8, rand(0.54, 0.7)],
+    [x8, mode === 1 ? rand(0.72, 0.88) : rand(0.44, 0.66)],
     [x8, deepBay],
     [x9, deepBay],
     [x9, farRightDrop],
-    [1.0, clamp(farRightDrop - rand(0.04, 0.12), 0.66, 0.94)],
+    [1.0, clamp(farRightDrop - rand(-0.08, 0.16), 0.52, 1.08)],
   ];
 
-  // Place top counter cleanly over a thick zone and clamp its height to guarantee >= 0.34 black bridge
-  const cw = rand(0.08, 0.12);
-  const cx = rand(x4 - 0.02, Math.max(x4 + 0.02, x7 - cw - 0.02));
-  const minOuterY = extremeEdgeY(edge, cx - 0.04, cx + cw + 0.04, 'min');
-  const minBridge = 0.36;
-  const ch = clamp(minOuterY - minBridge, 0.18, 0.3);
-  const slant = rand(0.03, 0.05);
-  const counter: [Pt, Pt, Pt, Pt] = [
-    [cx, -0.02],
-    [cx + cw, -0.02],
-    [cx + cw - slant, ch],
-    [cx, ch],
-  ];
+  const cw = rand(0.085, 0.13);
+  const cx = clamp(
+    mode === 0
+      ? rand(0.38, 0.52)
+      : mode === 1
+        ? rand(0.5, 0.64)
+        : rand(0.42, 0.58),
+    0.34,
+    0.72 - cw
+  );
+  const slant = rand(0.03, 0.065);
 
-  const pose: MonolithPose = { edge, counter };
+  const pose: MonolithPose = { edge, counterSpec: [cx, cw, slant] };
   return flipped ? mirrorPose(pose) : pose;
 }
 
 /**
- * Generates a unique, glitch-free Poster-01 style BOTTOM black display-type silhouette.
- * Enforces generous minimum black ink bridge thickness everywhere (never pinches thin).
+ * Generates high-contrast, dramatically shifting Poster-01 / Poster-02 BOTTOM silhouettes.
+ * Alternating `variant` indices invert peaks and deep valleys for bold kinetic energy.
  */
-function generateBottomPose(flipped: boolean): MonolithPose {
-  const x1 = rand(0.06, 0.11);
-  const x2 = x1 + rand(0.06, 0.1);
-  const x3 = x2 + rand(0.05, 0.09);
-  const x4 = x3 + rand(0.1, 0.15);
-  const x5 = x4 + rand(0.06, 0.1);
-  const x6 = x5 + rand(0.11, 0.16);
-  const x7 = clamp(x6 + rand(0.07, 0.11), 0.58, 0.72);
-  const x8 = clamp(x7 + rand(0.09, 0.13), 0.7, 0.83);
-  const x9 = clamp(x8 + rand(0.05, 0.08), 0.78, 0.89);
-  const x10 = clamp(x9 + rand(0.05, 0.07), 0.86, 0.94);
+function generateBottomPose(flipped: boolean, variant: number): MonolithPose {
+  const mode = variant % 3;
 
-  const leftBlock = rand(0.06, 0.22);
-  const leftSlot = rand(0.46, 0.58);
-  const peak1 = rand(0.02, 0.15);
-  const centerValley = rand(0.28, 0.42);
-  const peak2 = rand(0.02, 0.14);
-  const rightStep = rand(0.32, 0.44);
-  const rightShelf = rand(0.2, 0.34);
+  const x1 =
+    mode === 0
+      ? rand(0.04, 0.09)
+      : mode === 1
+        ? rand(0.11, 0.17)
+        : rand(0.06, 0.12);
+  const x2 = x1 + (mode === 0 ? rand(0.09, 0.14) : rand(0.05, 0.1));
+  const x3 = x2 + rand(0.05, 0.1);
+  const x4 = x3 + (mode === 1 ? rand(0.12, 0.17) : rand(0.07, 0.13));
+  const x5 = x4 + rand(0.06, 0.12);
+  const x6 = x5 + (mode === 2 ? rand(0.12, 0.17) : rand(0.08, 0.14));
+  const x7 = clamp(x6 + rand(0.06, 0.12), 0.55, 0.75);
+  const x8 = clamp(x7 + rand(0.08, 0.14), 0.68, 0.85);
+  const x9 = clamp(x8 + rand(0.04, 0.09), 0.77, 0.91);
+  const x10 = clamp(x9 + rand(0.04, 0.08), 0.85, 0.96);
+
+  const leftBlock =
+    mode === 0
+      ? rand(-0.1, 0.12)
+      : mode === 1
+        ? rand(0.32, 0.5)
+        : rand(0.02, 0.2);
+  const leftSlot =
+    mode === 0
+      ? rand(0.56, 0.74)
+      : mode === 1
+        ? rand(0.18, 0.36)
+        : rand(0.46, 0.66);
+  const peak1 =
+    mode === 0
+      ? rand(-0.12, 0.06)
+      : mode === 1
+        ? rand(0.22, 0.38)
+        : rand(-0.08, 0.1);
+  const centerValley =
+    mode === 0
+      ? rand(0.36, 0.54)
+      : mode === 1
+        ? rand(-0.08, 0.12)
+        : rand(0.28, 0.46);
+  const peak2 =
+    mode === 0
+      ? rand(-0.06, 0.12)
+      : mode === 1
+        ? rand(0.2, 0.36)
+        : rand(-0.14, 0.04);
+  const rightStep =
+    mode === 0
+      ? rand(0.4, 0.58)
+      : mode === 1
+        ? rand(0.14, 0.3)
+        : rand(0.34, 0.52);
+  const rightShelf =
+    mode === 0
+      ? rand(0.1, 0.28)
+      : mode === 1
+        ? rand(-0.06, 0.14)
+        : rand(0.18, 0.34);
 
   const edge: Pt[] = [
     [0.0, leftBlock],
     [x1, leftBlock],
     [x1, leftSlot],
     [x2, leftSlot],
-    [x3, rand(0.2, 0.34)],
+    [x3, mode === 1 ? rand(0.02, 0.2) : rand(0.24, 0.44)],
     [x4, peak1],
     [x5, centerValley],
     [x6, peak2],
-    [x7, clamp(peak2 + rand(0.06, 0.12), 0.1, 0.26)],
+    [x7, clamp(peak2 + rand(0.04, 0.16), -0.02, 0.34)],
     [x7, rightStep],
     [x8, rightStep],
     [x9, rightShelf],
     [x10, rightShelf],
-    [x10, rand(0.5, 0.62)],
-    [1.0, rand(0.42, 0.56)],
+    [x10, mode === 1 ? rand(0.34, 0.52) : rand(0.56, 0.74)],
+    [1.0, mode === 1 ? rand(0.22, 0.42) : rand(0.46, 0.66)],
   ];
 
-  // Place bottom diagonal counter cleanly under the thick center-right peak with >= 0.36 black bridge above
-  const cw = rand(0.08, 0.11);
-  const cx = clamp(rand(x5 + 0.04, x8 - cw - 0.02), 0.48, 0.72);
-  const maxOuterY = extremeEdgeY(edge, cx - 0.04, cx + cw + 0.04, 'max');
-  const minBridge = 0.38;
-  const counterTop = clamp(maxOuterY + minBridge, 0.68, 0.82);
-  const counter: [Pt, Pt, Pt, Pt] = [
-    [cx, clamp(counterTop + 0.1, 0.78, 0.92)],
-    [cx + cw, counterTop],
-    [cx + cw, 1.04],
-    [cx, 1.04],
-  ];
+  const cw = rand(0.085, 0.125);
+  const cx = clamp(
+    mode === 0
+      ? rand(0.46, 0.58)
+      : mode === 1
+        ? rand(0.56, 0.68)
+        : rand(0.5, 0.64),
+    0.42,
+    0.76 - cw
+  );
+  const slant = rand(0.08, 0.14);
 
-  const pose: MonolithPose = { edge, counter };
+  const pose: MonolithPose = { edge, counterSpec: [cx, cw, slant] };
   return flipped ? mirrorPose(pose) : pose;
 }
 
@@ -242,22 +321,27 @@ export const HeroMotionForms: React.FC<HeroMotionFormsProps> = ({
     const flipTop = Math.random() < 0.5;
     const flipBottom = Math.random() < 0.5;
     const topPoses: MonolithPose[] = [
-      generateTopPose(flipTop),
-      generateTopPose(flipTop),
-      generateTopPose(flipTop),
-      generateTopPose(flipTop),
+      generateTopPose(flipTop, 0),
+      generateTopPose(flipTop, 1),
+      generateTopPose(flipTop, 2),
+      generateTopPose(flipTop, 0),
+      generateTopPose(flipTop, 1),
+      generateTopPose(flipTop, 2),
     ];
     const bottomPoses: MonolithPose[] = [
-      generateBottomPose(flipBottom),
-      generateBottomPose(flipBottom),
-      generateBottomPose(flipBottom),
-      generateBottomPose(flipBottom),
+      generateBottomPose(flipBottom, 1),
+      generateBottomPose(flipBottom, 2),
+      generateBottomPose(flipBottom, 0),
+      generateBottomPose(flipBottom, 1),
+      generateBottomPose(flipBottom, 2),
+      generateBottomPose(flipBottom, 0),
     ];
 
-    const topCycle = rand(3.6, 4.5);
-    const bottomCycle = rand(4.0, 5.0);
+    const topCycle = rand(2.1, 2.6);
+    const bottomCycle = rand(2.3, 2.8);
     const topPhase = rand(0, topCycle * topPoses.length);
     const bottomPhase = rand(0, bottomCycle * bottomPoses.length);
+    const morphedEdge: Pt[] = Array.from({ length: 15 }, () => [0, 0]);
 
     let width = 0;
     let height = 0;
@@ -322,26 +406,29 @@ export const HeroMotionForms: React.FC<HeroMotionFormsProps> = ({
     ) => {
       const isCompact = width < 720;
       const bandH = Math.min(
-        height * (isCompact ? 0.23 : 0.285),
-        isCompact ? 168 : 252
+        height * (isCompact ? 0.25 : 0.305),
+        isCompact ? 184 : 272
       );
 
-      const overscan = 48;
+      const overscan = 64;
       const drawW = width + overscan * 2;
-      const shiftX = -overscan + (smoothPx - 0.5) * (isTop ? -36 : 36);
+      const surgeX =
+        Math.sin((elapsed + phaseShift) * (isTop ? 1.55 : -1.45)) * 24;
+      const shiftX =
+        -overscan + surgeX + (smoothPx - 0.5) * (isTop ? -52 : 52);
       const baseY = isTop
-        ? -scrollOffset + focusBoost * 14
-        : height - bandH + scrollOffset - focusBoost * 14;
+        ? -scrollOffset + focusBoost * 22
+        : height - bandH + scrollOffset - focusBoost * 22;
 
       const totalCycle = (elapsed + phaseShift) / cycleDuration;
       const idx = Math.floor(totalCycle) % poses.length;
       const nextIdx = (idx + 1) % poses.length;
       const raw = totalCycle - Math.floor(totalCycle);
 
-      const hold = 0.1;
+      const hold = 0.05;
       const morphT =
         !prefersReduced && raw > hold
-          ? easeInOutCubic(clamp01((raw - hold) / (1 - hold)))
+          ? easeInOutQuart(clamp01((raw - hold) / (1 - hold)))
           : 0;
 
       const from = poses[idx];
@@ -351,9 +438,9 @@ export const HeroMotionForms: React.FC<HeroMotionFormsProps> = ({
       ctx.fillStyle = '#000000';
       ctx.beginPath();
       if (isTop) {
-        ctx.moveTo(-overscan - 10, -60);
+        ctx.moveTo(-overscan - 10, -70);
       } else {
-        ctx.moveTo(-overscan - 10, height + 60);
+        ctx.moveTo(-overscan - 10, height + 70);
       }
 
       for (let i = 0; i < from.edge.length; i++) {
@@ -361,29 +448,79 @@ export const HeroMotionForms: React.FC<HeroMotionFormsProps> = ({
         const [tx, ty] = to.edge[i];
         const mx = fx + (tx - fx) * morphT;
         const my = fy + (ty - fy) * morphT;
+        morphedEdge[i][0] = mx;
+        morphedEdge[i][1] = my;
         ctx.lineTo(shiftX + mx * drawW, baseY + my * bandH);
       }
 
       if (isTop) {
-        ctx.lineTo(width + overscan + 10, -60);
+        ctx.lineTo(width + overscan + 10, -70);
       } else {
-        ctx.lineTo(width + overscan + 10, height + 60);
+        ctx.lineTo(width + overscan + 10, height + 70);
       }
       ctx.closePath();
       ctx.fill();
 
-      // 2. Signature crisp #808080 negative-space counter cutout
+      // 2. Signature crisp #808080 negative-space counter cutout, dynamically clamped
+      // against the instantaneous morphed contour so the black bridge NEVER pinches thin
+      const [fcx, fcw, fslant] = from.counterSpec;
+      const [tcx, tcw, tslant] = to.counterSpec;
+      const cx = fcx + (tcx - fcx) * morphT;
+      const cw = fcw + (tcw - fcw) * morphT;
+      const slant = fslant + (tslant - fslant) * morphT;
+
       ctx.fillStyle = '#808080';
       ctx.beginPath();
-      for (let i = 0; i < 4; i++) {
-        const [fx, fy] = from.counter[i];
-        const [tx, ty] = to.counter[i];
-        const mx = fx + (tx - fx) * morphT;
-        const my = fy + (ty - fy) * morphT;
-        const px = shiftX + mx * drawW;
-        const py = baseY + my * bandH;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
+
+      if (isTop) {
+        const minOuterY = extremeEdgeY(
+          morphedEdge,
+          cx - 0.04,
+          cx + cw + 0.04,
+          'min'
+        );
+        const ch = clamp(minOuterY - 0.36, 0.14, 0.34);
+        const pts: [Pt, Pt, Pt, Pt] = [
+          [cx, -0.04],
+          [cx + cw, -0.04],
+          [cx + cw - slant, ch],
+          [cx, ch],
+        ];
+        for (let i = 0; i < 4; i++) {
+          const px = shiftX + pts[i][0] * drawW;
+          const py = baseY + pts[i][1] * bandH;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+      } else {
+        const maxOuterY = extremeEdgeY(
+          morphedEdge,
+          cx - 0.04,
+          cx + cw + 0.04,
+          'max'
+        );
+        const counterTop = clamp(maxOuterY + 0.38, 0.64, 0.85);
+        const leftTop = clamp(counterTop + Math.abs(slant), 0.72, 0.93);
+        const pts: [Pt, Pt, Pt, Pt] =
+          slant >= 0
+            ? [
+                [cx, leftTop],
+                [cx + cw, counterTop],
+                [cx + cw, 1.06],
+                [cx, 1.06],
+              ]
+            : [
+                [cx, counterTop],
+                [cx + cw, leftTop],
+                [cx + cw, 1.06],
+                [cx, 1.06],
+              ];
+        for (let i = 0; i < 4; i++) {
+          const px = shiftX + pts[i][0] * drawW;
+          const py = baseY + pts[i][1] * bandH;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
       }
       ctx.closePath();
       ctx.fill();
@@ -396,12 +533,12 @@ export const HeroMotionForms: React.FC<HeroMotionFormsProps> = ({
       const elapsed = (now - startTime) * 0.001;
 
       const targetX = pointerRef.current.active ? pointerRef.current.x : 0.5;
-      smoothPx += (targetX - smoothPx) * 0.08;
+      smoothPx += (targetX - smoothPx) * 0.05;
 
       smoothTopFocus +=
-        ((activeGlyphRef.current === 'gong' ? 1 : 0) - smoothTopFocus) * 0.12;
+        ((activeGlyphRef.current === 'gong' ? 1 : 0) - smoothTopFocus) * 0.09;
       smoothBottomFocus +=
-        ((activeGlyphRef.current === 'ju' ? 1 : 0) - smoothBottomFocus) * 0.12;
+        ((activeGlyphRef.current === 'ju' ? 1 : 0) - smoothBottomFocus) * 0.09;
 
       const scrollOffset = scrollRef.current * 48;
 
