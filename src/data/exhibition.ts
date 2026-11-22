@@ -167,6 +167,7 @@ export const EXHIBITION_SECTIONS: ExhibitionSectionData[] = [
       '임성종',
       '엄세은',
       '장재원',
+      '김호정',
     ],
     experienceTime: '단편영화 상영',
     participationNote: '1층 좌측 FILM ROOM에서 상영됩니다. 입장 시 정숙을 부탁드립니다.',
@@ -330,6 +331,7 @@ export const PRODUCTION_CREDITS: CreditRow[] = [
       '임성종',
       '엄세은',
       '장재원',
+      '김호정',
     ],
   },
   {
