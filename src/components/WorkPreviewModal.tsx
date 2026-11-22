@@ -195,7 +195,8 @@ export const WorkPreviewModal: React.FC<WorkPreviewModalProps> = ({
                 poster={activeMedia.poster}
                 controls
                 playsInline
-                className="preview-sheet__media"
+                preload="metadata"
+                className="preview-sheet__media preview-sheet__media--video"
               />
             )}
             {activeMedia.type === 'embed' && (

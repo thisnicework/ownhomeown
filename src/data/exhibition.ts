@@ -169,6 +169,16 @@ export const EXHIBITION_SECTIONS: ExhibitionSectionData[] = [
     ],
     experienceTime: '단편영화 상영',
     participationNote: '1층 좌측 FILM ROOM에서 상영됩니다. 입장 시 정숙을 부탁드립니다.',
+    preview: {
+      items: [
+        {
+          type: 'video',
+          src: '/previews/section-1/trailer.mp4',
+          poster: '/previews/section-1/poster.jpg',
+          alt: 'SECTION 1 단편영화 〈쓰레기 궁전의 신데렐라〉 트레일러',
+        },
+      ],
+    },
   },
   {
     id: 'section-2',

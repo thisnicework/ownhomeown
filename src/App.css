@@ -1419,6 +1419,12 @@
   background: #0a0a0a;
 }
 
+.preview-sheet__media--video {
+  width: min(100%, 960px);
+  aspect-ratio: 16 / 9;
+  background: #000000;
+}
+
 .preview-sheet__media.is-pixelated {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
