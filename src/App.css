@@ -124,7 +124,7 @@
 .pdf-wordmark--cover {
   font-size: clamp(3.1rem, 7.6vw, 6.2rem);
   /* Optical centering compensation for lighter trailing Hanja subscript 主 */
-  transform: translateX(0.14em);
+  transform: translateX(0.07em);
 }
 
 /* Floor Marks matching PDF Page 2 Center Top/Bottom */
@@ -2046,7 +2046,7 @@
 @media (max-width: 720px) {
   .pdf-wordmark--cover {
     font-size: clamp(3.35rem, 15.2vw, 4.4rem);
-    transform: translateX(0.18em);
+    transform: translateX(0.09em);
   }
 
   .pdf-meaning-kicker {
