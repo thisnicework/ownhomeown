@@ -28,16 +28,8 @@ function rand(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-function easeInOutSine(t: number): number {
-  return -(Math.cos(Math.PI * t) - 1) / 2;
-}
-
-/**
- * Viscous wave easing with subtle organic swell (꿀렁거리는 탄성 곡선)
- */
-function easeViscous(t: number): number {
-  const s = easeInOutSine(t);
-  return s + Math.sin(t * Math.PI * 2) * 0.055 * Math.sin(t * Math.PI);
+function easeInOutQuart(t: number): number {
+  return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
 }
 
 function mirrorPose(pose: MonolithPose): MonolithPose {
@@ -345,9 +337,8 @@ export const HeroMotionForms: React.FC<HeroMotionFormsProps> = ({
       generateBottomPose(flipBottom, 0),
     ];
 
-    // Medium tempo with a distinct still hold on each pose after undulating
-    const topCycle = rand(3.8, 4.5);
-    const bottomCycle = rand(4.1, 4.8);
+    const topCycle = rand(3.1, 3.8);
+    const bottomCycle = rand(3.4, 4.1);
     const topPhase = rand(0, topCycle * topPoses.length);
     const bottomPhase = rand(0, bottomCycle * bottomPoses.length);
     const morphedEdge: Pt[] = Array.from({ length: 15 }, () => [0, 0]);
@@ -419,117 +410,64 @@ export const HeroMotionForms: React.FC<HeroMotionFormsProps> = ({
         isCompact ? 184 : 272
       );
 
-      const overscan = 68;
+      const overscan = 64;
       const drawW = width + overscan * 2;
-      const dir = isTop ? 1 : -1;
+      const surgeX =
+        Math.sin((elapsed + phaseShift) * (isTop ? 1.15 : -1.05)) * 22;
+      const shiftX =
+        -overscan + surgeX + (smoothPx - 0.5) * (isTop ? -52 : 52);
+      const baseY = isTop
+        ? -scrollOffset + focusBoost * 22
+        : height - bandH + scrollOffset - focusBoost * 22;
 
       const totalCycle = (elapsed + phaseShift) / cycleDuration;
       const idx = Math.floor(totalCycle) % poses.length;
       const nextIdx = (idx + 1) % poses.length;
       const raw = totalCycle - Math.floor(totalCycle);
 
-      // Hold completely still for 24% of each cycle (~1.0s), then undulate into the next pose
-      const hold = 0.24;
-      const morphPhase =
+      const hold = 0.08;
+      const morphT =
         !prefersReduced && raw > hold
-          ? clamp01((raw - hold) / (1 - hold))
+          ? easeInOutQuart(clamp01((raw - hold) / (1 - hold)))
           : 0;
-      const globalEnv = Math.sin(morphPhase * Math.PI);
-
-      const surgeX =
-        Math.sin(morphPhase * Math.PI * 2 * dir + idx * 1.3) * 22 * globalEnv;
-      const surgeY =
-        Math.sin(morphPhase * Math.PI * 2 - 0.6) * 11 * globalEnv;
-      const shiftX =
-        -overscan + surgeX + (smoothPx - 0.5) * (isTop ? -52 : 52);
-      const baseY = isTop
-        ? -scrollOffset + focusBoost * 22 + surgeY
-        : height - bandH + scrollOffset - focusBoost * 22 - surgeY;
 
       const from = poses[idx];
       const to = poses[nextIdx];
 
-      // 1. Unified single-path solid #000000 display-type mass:
-      // ripples like a heavy wave during morphPhase (0 -> 1) and locks completely still during hold
+      // 1. Unified single-path solid #000000 display-type mass
       ctx.fillStyle = '#000000';
       ctx.beginPath();
       if (isTop) {
-        ctx.moveTo(-overscan - 10, -80);
+        ctx.moveTo(-overscan - 10, -70);
       } else {
-        ctx.moveTo(-overscan - 10, height + 80);
+        ctx.moveTo(-overscan - 10, height + 70);
       }
 
-      const nPts = from.edge.length;
-      let prevX = 0;
-
-      for (let i = 0; i < nPts; i++) {
+      for (let i = 0; i < from.edge.length; i++) {
         const [fx, fy] = from.edge[i];
         const [tx, ty] = to.edge[i];
-
-        // Travelling phase lag across the contour so vertices ripple sequentially,
-        // yet all finish at morphPhase === 1 so the entire monolith comes to a full stop
-        const spatialPhase = isTop ? fx : 1 - fx;
-        const staggerSpan = 0.34;
-        const localRaw =
-          morphPhase <= 0
-            ? 0
-            : clamp01(
-                (morphPhase - spatialPhase * staggerSpan) / (1 - staggerSpan)
-              );
-        const localT = !prefersReduced ? easeViscous(localRaw) : 0;
-        const localEnv = Math.sin(localRaw * Math.PI);
-
-        let mx = fx + (tx - fx) * localT;
-        let my = fy + (ty - fy) * localT;
-
-        if (!prefersReduced && localEnv > 0.0001) {
-          // Horizontal undulation gated by localEnv (0 at start and 0 at rest)
-          if (i > 0 && i < nPts - 1) {
-            const xSwell =
-              Math.sin(localRaw * Math.PI * 2 - fx * 4.6 * dir) *
-              0.026 *
-              localEnv;
-            mx = clamp(mx + xSwell, prevX, 0.985);
-          }
-
-          // Vertical multi-harmonic undulation (꿀렁거리다 정지)
-          const ySwell =
-            (Math.sin(localRaw * Math.PI * 2.5 - fx * 5.4 * dir + i * 0.35) *
-              0.125 +
-              Math.cos(localRaw * Math.PI * 2 + i * 0.6) * 0.055) *
-            localEnv;
-          my = clamp(my + ySwell, 0.04, 1.16);
-        }
-
-        prevX = mx;
+        const mx = fx + (tx - fx) * morphT;
+        const my = fy + (ty - fy) * morphT;
         morphedEdge[i][0] = mx;
         morphedEdge[i][1] = my;
         ctx.lineTo(shiftX + mx * drawW, baseY + my * bandH);
       }
 
       if (isTop) {
-        ctx.lineTo(width + overscan + 10, -80);
+        ctx.lineTo(width + overscan + 10, -70);
       } else {
-        ctx.lineTo(width + overscan + 10, height + 80);
+        ctx.lineTo(width + overscan + 10, height + 70);
       }
       ctx.closePath();
       ctx.fill();
 
-      // 2. Signature crisp #808080 negative-space counter cutout riding the same gated undulation
+      // 2. Signature crisp #808080 negative-space counter cutout, dynamically clamped
+      // against the instantaneous morphed contour so the black bridge NEVER pinches thin
       const [fcx, fcw, fslant] = from.counterSpec;
       const [tcx, tcw, tslant] = to.counterSpec;
-      const counterT = !prefersReduced ? easeViscous(morphPhase) : 0;
-      const counterSwellX = !prefersReduced
-        ? Math.sin(morphPhase * Math.PI * 2 * dir) * 0.02 * globalEnv
-        : 0;
-      const cx = fcx + (tcx - fcx) * counterT + counterSwellX;
-      const cw = fcw + (tcw - fcw) * counterT;
-      const slant =
-        fslant +
-        (tslant - fslant) * counterT +
-        (!prefersReduced
-          ? Math.sin(morphPhase * Math.PI * 2) * 0.016 * globalEnv
-          : 0);
+      const cx = fcx + (tcx - fcx) * morphT;
+      const cw = fcw + (tcw - fcw) * morphT;
+      const slant = fslant + (tslant - fslant) * morphT;
 
       ctx.fillStyle = '#808080';
       ctx.beginPath();
