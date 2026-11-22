@@ -1136,6 +1136,68 @@
   margin-top: 1.35rem;
 }
 
+.pdf-sec-block__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.45rem;
+}
+
+.pdf-sec-work-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.pdf-sec-work-btn__icon {
+  flex-shrink: 0;
+  opacity: 0.52;
+  transition: transform 0.25s var(--ease-expo), opacity 0.2s ease;
+}
+
+.pdf-sec-work-btn:hover .pdf-sec-work-btn__icon {
+  opacity: 1;
+  transform: translate(2px, -2px);
+}
+
+.pdf-sec-preview-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0 0 0.16rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid currentColor;
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  opacity: 0.86;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.pdf-sec-preview-btn__icon {
+  transition: transform 0.25s var(--ease-expo);
+}
+
+.pdf-sec-preview-btn:hover {
+  opacity: 1;
+}
+
+.pdf-sec-preview-btn:hover .pdf-sec-preview-btn__icon {
+  transform: translate(2px, -2px);
+}
+
 .pdf-sec-toggle {
   display: inline-flex;
   align-items: center;
@@ -1188,6 +1250,312 @@
   display: block;
   font-size: 0.76rem;
   opacity: 0.58;
+}
+
+/* --------------------------------------------------------------------------
+   04-B. 작품 미리보기 (Full-screen Monochrome Gallery Sheet)
+   -------------------------------------------------------------------------- */
+@keyframes previewFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes previewMediaIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.preview-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: clamp(1rem, 3vw, 2.25rem);
+  animation: previewFadeIn 0.26s var(--ease-expo) both;
+}
+
+.preview-sheet__panel {
+  width: 100%;
+  max-width: 1220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.1rem;
+  min-height: 0;
+}
+
+.preview-sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.preview-sheet__tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.preview-sheet__tab {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.15rem 0 0.3rem;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.preview-sheet__tab:hover:not(:disabled) {
+  color: #ffffff;
+}
+
+.preview-sheet__tab.is-active {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.preview-sheet__tab.is-active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1.5px;
+  background: #ffffff;
+}
+
+.preview-sheet__tab:disabled {
+  color: rgba(255, 255, 255, 0.22);
+  cursor: default;
+}
+
+.preview-sheet__tab-soon {
+  font-family: var(--font-sans);
+  font-size: 0.65rem;
+  letter-spacing: 0;
+  opacity: 0.8;
+}
+
+.preview-sheet__close {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.5rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.preview-sheet__close:hover {
+  border-color: #ffffff;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.preview-sheet__esc {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  opacity: 0.65;
+}
+
+.preview-sheet__stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: clamp(0rem, 4vw, 3.5rem);
+}
+
+.preview-sheet__figure {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: previewMediaIn 0.34s var(--ease-expo) both;
+}
+
+.preview-sheet__media {
+  display: block;
+  max-width: 100%;
+  max-height: min(68vh, 680px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  background: #0a0a0a;
+}
+
+.preview-sheet__media.is-pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.preview-sheet__embed {
+  width: min(100%, 960px);
+  aspect-ratio: 16 / 9;
+  background: #0a0a0a;
+}
+
+.preview-sheet__embed iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.preview-sheet__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.88);
+  cursor: pointer;
+  z-index: 2;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.preview-sheet__nav:hover {
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.preview-sheet__nav--prev {
+  left: 0;
+}
+
+.preview-sheet__nav--next {
+  right: 0;
+}
+
+.preview-sheet__pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+}
+
+.preview-sheet__count {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.56);
+}
+
+.preview-sheet__dots {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.preview-sheet__dot {
+  width: 18px;
+  height: 2px;
+  padding: 0;
+  border: none;
+  background: rgba(255, 255, 255, 0.28);
+  cursor: pointer;
+  transition: background 0.2s ease, width 0.25s var(--ease-expo);
+}
+
+.preview-sheet__dot.is-active {
+  width: 30px;
+  background: #ffffff;
+}
+
+.preview-sheet__footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 2rem;
+  flex-wrap: wrap;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.preview-sheet__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.preview-sheet__kicker {
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: -0.01em;
+}
+
+.preview-sheet__title {
+  margin: 0;
+  font-size: clamp(0.98rem, 1.4vw, 1.15rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: #ffffff;
+}
+
+.preview-sheet__artists {
+  margin: 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+@media (max-width: 720px) {
+  .preview-sheet__esc {
+    display: none;
+  }
+
+  .preview-sheet__tabs {
+    gap: 0.8rem;
+  }
+
+  .preview-sheet__media {
+    max-height: 60vh;
+  }
+
+  .preview-sheet__nav {
+    width: 36px;
+    height: 36px;
+  }
 }
 
 /* --------------------------------------------------------------------------

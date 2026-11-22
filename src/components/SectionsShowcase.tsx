@@ -1,26 +1,85 @@
-import React, { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ArrowUpRight, ChevronDown } from 'lucide-react';
 import { EXHIBITION_SECTIONS, type ExhibitionSectionData } from '../data/exhibition';
 import { CosmosFloorplan, type SectionId } from './CosmosFloorplan';
+import { WorkPreviewModal } from './WorkPreviewModal';
 
 type MobileFloorFilter = 'all' | '1F' | '2F';
 
+const PREVIEW_HASH_PREFIX = '#preview/';
+
+function parsePreviewHash(): SectionId | null {
+  if (typeof window === 'undefined') return null;
+  const hash = window.location.hash;
+  if (!hash.startsWith(PREVIEW_HASH_PREFIX)) return null;
+  const candidate = hash.slice(PREVIEW_HASH_PREFIX.length) as SectionId;
+  const match = EXHIBITION_SECTIONS.find(
+    (s) => s.id === candidate && (s.preview?.items.length ?? 0) > 0
+  );
+  return match ? match.id : null;
+}
+
 /**
  * Preserves the exact PDF Page 2 three-column spread on desktop while elevating it
- * with synchronized spatial-text focus, subtle participant disclosure, and a tactile
- * sticky 1F/2F floor switcher on tablet & mobile viewports.
+ * with synchronized spatial-text focus, subtle participant disclosure, a tactile
+ * sticky 1F/2F floor switcher on tablet & mobile, and Plan-A full-screen artwork previews.
  */
 export const SectionsShowcase: React.FC = () => {
   const [activeSection, setActiveSection] = useState<SectionId | null>(null);
   const [mobileFloor, setMobileFloor] = useState<MobileFloorFilter>('all');
   const [openArtists, setOpenArtists] = useState<Record<string, boolean>>({});
+  const [previewSectionId, setPreviewSectionId] = useState<SectionId | null>(
+    () => parsePreviewHash()
+  );
 
   const sec1 = EXHIBITION_SECTIONS[0];
   const sec2 = EXHIBITION_SECTIONS[1];
   const sec3 = EXHIBITION_SECTIONS[2];
   const sec4 = EXHIBITION_SECTIONS[3];
 
+  const openPreview = useCallback((id: SectionId) => {
+    const target = EXHIBITION_SECTIONS.find((s) => s.id === id);
+    if (!target || (target.preview?.items.length ?? 0) === 0) return;
+    setPreviewSectionId(id);
+    const nextHash = `${PREVIEW_HASH_PREFIX}${id}`;
+    if (window.location.hash !== nextHash) {
+      window.history.pushState(null, '', nextHash);
+    }
+  }, []);
+
+  const closePreview = useCallback(() => {
+    setPreviewSectionId(null);
+    if (window.location.hash.startsWith(PREVIEW_HASH_PREFIX)) {
+      window.history.replaceState(
+        null,
+        '',
+        window.location.pathname + window.location.search + '#sections'
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    const onHashOrPop = () => {
+      setPreviewSectionId(parsePreviewHash());
+    };
+    window.addEventListener('hashchange', onHashOrPop);
+    window.addEventListener('popstate', onHashOrPop);
+    return () => {
+      window.removeEventListener('hashchange', onHashOrPop);
+      window.removeEventListener('popstate', onHashOrPop);
+    };
+  }, []);
+
   const handleSelectSection = (id: SectionId) => {
+    const target = EXHIBITION_SECTIONS.find((s) => s.id === id);
+    const hasPreview = (target?.preview?.items.length ?? 0) > 0;
+
+    // Second click on an already-focused room opens its artwork preview directly
+    if (activeSection === id && hasPreview) {
+      openPreview(id);
+      return;
+    }
+
     setActiveSection(id);
     if (id === 'section-1' || id === 'section-2') {
       if (mobileFloor === '2F') setMobileFloor('1F');
@@ -46,6 +105,7 @@ export const SectionsShowcase: React.FC = () => {
     const isActive = activeSection === sec.id;
     const isDimmed = activeSection !== null && activeSection !== sec.id;
     const expanded = Boolean(openArtists[sec.id]);
+    const hasPreview = (sec.preview?.items.length ?? 0) > 0;
 
     return (
       <article
@@ -65,7 +125,20 @@ export const SectionsShowcase: React.FC = () => {
           ))}
         </div>
 
-        <h3 className="pdf-sec-block__work">{sec.artworkTitle}</h3>
+        {hasPreview ? (
+          <h3 className="pdf-sec-block__work">
+            <button
+              type="button"
+              className="pdf-sec-work-btn"
+              onClick={() => openPreview(sec.id)}
+            >
+              <span>{sec.artworkTitle}</span>
+              <ArrowUpRight size={15} className="pdf-sec-work-btn__icon" />
+            </button>
+          </h3>
+        ) : (
+          <h3 className="pdf-sec-block__work">{sec.artworkTitle}</h3>
+        )}
 
         <div className="pdf-sec-block__desc">
           {sec.description.map((para, i) => (
@@ -74,18 +147,31 @@ export const SectionsShowcase: React.FC = () => {
         </div>
 
         <div className="pdf-sec-block__meta">
-          <button
-            type="button"
-            className="pdf-sec-toggle"
-            aria-expanded={expanded}
-            onClick={() => toggleArtists(sec.id)}
-          >
-            <span>참여 {sec.artists.length}인</span>
-            <ChevronDown
-              size={14}
-              className={`pdf-sec-toggle__icon ${expanded ? 'is-open' : ''}`}
-            />
-          </button>
+          <div className="pdf-sec-block__actions">
+            <button
+              type="button"
+              className="pdf-sec-toggle"
+              aria-expanded={expanded}
+              onClick={() => toggleArtists(sec.id)}
+            >
+              <span>참여 {sec.artists.length}인</span>
+              <ChevronDown
+                size={14}
+                className={`pdf-sec-toggle__icon ${expanded ? 'is-open' : ''}`}
+              />
+            </button>
+
+            {hasPreview && (
+              <button
+                type="button"
+                className="pdf-sec-preview-btn"
+                onClick={() => openPreview(sec.id)}
+              >
+                <span>작품 미리보기</span>
+                <ArrowUpRight size={14} className="pdf-sec-preview-btn__icon" />
+              </button>
+            )}
+          </div>
           <div className={`pdf-sec-artists ${expanded ? 'is-open' : ''}`}>
             <div className="pdf-sec-artists__inner">
               <p>{sec.artists.join(' · ')}</p>
@@ -171,6 +257,12 @@ export const SectionsShowcase: React.FC = () => {
           {[sec3, sec4].map((sec) => renderSectionBlock(sec, 'dark'))}
         </div>
       </div>
+
+      <WorkPreviewModal
+        sectionId={previewSectionId}
+        onSelectSection={openPreview}
+        onClose={closePreview}
+      />
     </section>
   );
 };

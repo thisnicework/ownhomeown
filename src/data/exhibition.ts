@@ -5,6 +5,18 @@ export interface NavItem {
   en: string;
 }
 
+export interface PreviewMediaItem {
+  type: 'image' | 'video' | 'embed';
+  src: string;
+  alt: string;
+  poster?: string;
+  pixelated?: boolean;
+}
+
+export interface SectionPreviewData {
+  items: PreviewMediaItem[];
+}
+
 export interface ExhibitionSectionData {
   id: 'section-1' | 'section-2' | 'section-3' | 'section-4';
   number: string;
@@ -22,6 +34,7 @@ export interface ExhibitionSectionData {
   artists: string[];
   experienceTime: string;
   participationNote: string;
+  preview?: SectionPreviewData;
 }
 
 export interface CreditRow {
@@ -229,6 +242,15 @@ export const EXHIBITION_SECTIONS: ExhibitionSectionData[] = [
     artists: ['김인건', '이경민', '이정민'],
     experienceTime: '자유 이동 및 체류',
     participationNote: '2층 우측 SECTION 4에서 집과 집 사이의 거리와 경계를 자유롭게 경험할 수 있습니다.',
+    preview: {
+      items: [
+        {
+          type: 'image',
+          src: '/previews/section-4/01.jpg',
+          alt: 'SECTION 4 공간 〈각자의 집에서, 우리의 마을로〉 작품 미리보기',
+        },
+      ],
+    },
   },
 ];
 
