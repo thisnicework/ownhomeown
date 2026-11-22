@@ -32,6 +32,7 @@ export interface ExhibitionSectionData {
   description: string[];
   structuralTag: string;
   artists: string[];
+  sound?: string[];
   experienceTime: string;
   participationNote: string;
   preview?: SectionPreviewData;
@@ -201,6 +202,7 @@ export const EXHIBITION_SECTIONS: ExhibitionSectionData[] = [
     ],
     structuralTag: '1F 주主 · 4가지 동화 미니게임 · 인터랙티브',
     artists: ['고다선', '민지은', '송수연', '송시은', '이서윤'],
+    sound: ['김나연'],
     experienceTime: '직접 플레이 참여',
     participationNote: '1층 하단 SECTION 2 공간에서 네 가지 미니게임을 직접 플레이할 수 있습니다.',
     preview: {
@@ -250,6 +252,7 @@ export const EXHIBITION_SECTIONS: ExhibitionSectionData[] = [
     ],
     structuralTag: '2F 공共 · 空家(빈집) → 共家(함께 만드는 집)',
     artists: ['전세원', '홍진택'],
+    sound: ['권병지'],
     experienceTime: '가구 채색 및 참여',
     participationNote: '2층 좌측 SECTION 3에서 직접 색칠한 가구를 공동의 집에 배치할 수 있습니다.',
     preview: {
@@ -331,9 +334,9 @@ export const PRODUCTION_CREDITS: CreditRow[] = [
   },
   {
     role: 'SECTION 2',
-    names: ['고다선', '민지은', '송수연', '송시은', '이서윤'],
+    names: ['고다선', '민지은', '송수연', '송시은', '이서윤', '· 사운드 김나연'],
   },
-  { role: 'SECTION 3', names: ['전세원', '홍진택'] },
+  { role: 'SECTION 3', names: ['전세원', '홍진택', '· 사운드 권병지'] },
   { role: 'SECTION 4', names: ['김인건', '이경민', '이정민'] },
 ];
 

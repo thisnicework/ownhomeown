@@ -90,6 +90,23 @@ export const WorkPreviewModal: React.FC<WorkPreviewModalProps> = ({
     if (playPromise !== undefined) {
       playPromise.catch(() => {
         video.muted = true;
+        video.play().catch(() => { });
+      });
+    }
+  }, [activeMedia]);
+
+  // Auto-play preview videos immediately (with muted fallback if browser blocks unmuted autoplay)
+  useEffect(() => {
+    if (!activeMedia || activeMedia.type !== 'video') return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.currentTime = 0;
+    video.muted = false;
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        video.muted = true;
         video.play().catch(() => {});
       });
     }
@@ -182,9 +199,8 @@ export const WorkPreviewModal: React.FC<WorkPreviewModalProps> = ({
               <img
                 src={activeMedia.src}
                 alt={activeMedia.alt}
-                className={`preview-sheet__media ${
-                  activeMedia.pixelated ? 'is-pixelated' : ''
-                }`}
+                className={`preview-sheet__media ${activeMedia.pixelated ? 'is-pixelated' : ''
+                  }`}
               />
             )}
             {activeMedia.type === 'video' && (
@@ -253,7 +269,12 @@ export const WorkPreviewModal: React.FC<WorkPreviewModalProps> = ({
             </span>
             <h3 className="preview-sheet__title">{section.artworkTitle}</h3>
           </div>
-          <p className="preview-sheet__artists">{section.artists.join(' · ')}</p>
+          <p className="preview-sheet__artists">
+            {section.artists.join(' · ')}
+            {section.sound && section.sound.length > 0
+              ? ` · 사운드 ${section.sound.join(' · ')}`
+              : ''}
+          </p>
         </footer>
       </div>
     </div>

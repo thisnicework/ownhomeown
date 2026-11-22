@@ -1246,6 +1246,11 @@
   opacity: 0.8;
 }
 
+.pdf-sec-artists__inner .pdf-sec-artists__sound {
+  margin: 0 0 0.35rem;
+  opacity: 0.72;
+}
+
 .pdf-sec-artists__inner small {
   display: block;
   font-size: 0.76rem;

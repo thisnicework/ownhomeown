@@ -154,7 +154,7 @@ export const SectionsShowcase: React.FC = () => {
               aria-expanded={expanded}
               onClick={() => toggleArtists(sec.id)}
             >
-              <span>참여 {sec.artists.length}인</span>
+              <span>참여 {sec.artists.length + (sec.sound?.length ?? 0)}인</span>
               <ChevronDown
                 size={14}
                 className={`pdf-sec-toggle__icon ${expanded ? 'is-open' : ''}`}
@@ -175,6 +175,11 @@ export const SectionsShowcase: React.FC = () => {
           <div className={`pdf-sec-artists ${expanded ? 'is-open' : ''}`}>
             <div className="pdf-sec-artists__inner">
               <p>{sec.artists.join(' · ')}</p>
+              {sec.sound && sec.sound.length > 0 && (
+                <p className="pdf-sec-artists__sound">
+                  사운드 · {sec.sound.join(' · ')}
+                </p>
+              )}
               <small>{sec.participationNote}</small>
             </div>
           </div>
