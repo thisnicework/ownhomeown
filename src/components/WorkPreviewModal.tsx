@@ -271,9 +271,13 @@ export const WorkPreviewModal: React.FC<WorkPreviewModalProps> = ({
           </div>
           <p className="preview-sheet__artists">
             {section.artists.join(' · ')}
-            {section.sound && section.sound.length > 0
-              ? ` · 사운드 ${section.sound.join(' · ')}`
-              : ''}
+            {section.sound && section.sound.length > 0 && (
+              <>
+                {' · '}
+                <span className="preview-sheet__role">사운드</span>{' '}
+                {section.sound.join(' · ')}
+              </>
+            )}
           </p>
         </footer>
       </div>

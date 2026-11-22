@@ -177,7 +177,8 @@ export const SectionsShowcase: React.FC = () => {
               <p>{sec.artists.join(' · ')}</p>
               {sec.sound && sec.sound.length > 0 && (
                 <p className="pdf-sec-artists__sound">
-                  사운드 - {sec.sound.join(' · ')}
+                  <span className="pdf-sec-artists__role">사운드</span>{' '}
+                  {sec.sound.join(' · ')}
                 </p>
               )}
               <small>{sec.participationNote}</small>
