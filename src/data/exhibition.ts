@@ -203,6 +203,30 @@ export const EXHIBITION_SECTIONS: ExhibitionSectionData[] = [
     artists: ['고다선', '민지은', '송수연', '송시은', '이서윤'],
     experienceTime: '직접 플레이 참여',
     participationNote: '1층 하단 SECTION 2 공간에서 네 가지 미니게임을 직접 플레이할 수 있습니다.',
+    preview: {
+      items: [
+        {
+          type: 'image',
+          src: '/previews/section-2/01.jpg',
+          alt: 'SECTION 2 인터랙티브 픽셀 게임 〈공주를 그만두는 방법〉 타이틀 화면',
+        },
+        {
+          type: 'image',
+          src: '/previews/section-2/02.jpg',
+          alt: 'SECTION 2 인터랙티브 픽셀 게임 〈공주를 그만두는 방법〉 미니게임 플레이 화면',
+        },
+        {
+          type: 'image',
+          src: '/previews/section-2/03.jpg',
+          alt: 'SECTION 2 인터랙티브 픽셀 게임 〈공주를 그만두는 방법〉 선택 화면',
+        },
+        {
+          type: 'image',
+          src: '/previews/section-2/04.jpg',
+          alt: 'SECTION 2 인터랙티브 픽셀 게임 〈공주를 그만두는 방법〉 픽셀 로고',
+        },
+      ],
+    },
   },
   {
     id: 'section-3',
@@ -228,6 +252,16 @@ export const EXHIBITION_SECTIONS: ExhibitionSectionData[] = [
     artists: ['전세원', '홍진택'],
     experienceTime: '가구 채색 및 참여',
     participationNote: '2층 좌측 SECTION 3에서 직접 색칠한 가구를 공동의 집에 배치할 수 있습니다.',
+    preview: {
+      items: [
+        {
+          type: 'video',
+          src: '/previews/section-3/preview.mp4',
+          poster: '/previews/section-3/poster.jpg',
+          alt: 'SECTION 3 인터랙티브 미디어아트 〈공가〉 프리뷰 영상',
+        },
+      ],
+    },
   },
   {
     id: 'section-4',
