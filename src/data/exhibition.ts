@@ -235,7 +235,7 @@ export const EXHIBITION_SECTIONS: ExhibitionSectionData[] = [
 export const PRODUCTION_CREDITS: CreditRow[] = [
   { role: '지도교수', names: ['홍민기'] },
   { role: '프로젝트 총괄', names: ['오민영', '박성훈'] },
-  { role: '기획 · 연출', names: ['최한나', '김채린', '엄채원', '이재경'] },
+  { role: '기획 · 연출', names: ['최한나', '김채린', '염채원', '이재경'] },
   { role: '공간 디자인', names: ['김인건', '이경민', '이정민'] },
   { role: '그래픽 디자인', names: ['한시우', '이세진'] },
   { role: '사진', names: ['김재범'] },
@@ -305,7 +305,7 @@ export const SPECIAL_THANKS_CREDITS: CreditRow[] = [
   {
     subGroup: '전시 협력',
     role: '기획',
-    names: ['장세윤', '이선미', '황수민', '김동욱'],
+    names: ['장세윤', '이선미', '황수민', '김동옥'],
   },
   {
     subGroup: '전시 협력',
@@ -338,7 +338,7 @@ export const SUPPORT_CREDITS: CreditRow[] = [
   {
     subGroup: '학부 및 아카이빙',
     role: '영상/아카이빙',
-    names: ['황용희'],
+    names: ['황용회'],
   },
   {
     subGroup: '〈창작실습지원센터〉',
@@ -373,7 +373,7 @@ export const SUPPORT_CREDITS: CreditRow[] = [
   {
     subGroup: '〈창작실습지원센터〉',
     role: '컴퓨터랩(아카이빙)',
-    names: ['황용희'],
+    names: ['황용회'],
   },
   {
     subGroup: '〈창작실습지원센터〉',
