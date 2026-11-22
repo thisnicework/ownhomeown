@@ -21,6 +21,7 @@ export const WorkPreviewModal: React.FC<WorkPreviewModalProps> = ({
   const [mediaIndex, setMediaIndex] = useState(0);
   const touchStartXRef = useRef<number | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const section: ExhibitionSectionData | null = sectionId
     ? EXHIBITION_SECTIONS.find((s) => s.id === sectionId) ?? null
@@ -96,6 +97,23 @@ export const WorkPreviewModal: React.FC<WorkPreviewModalProps> = ({
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [section, onClose, stepMedia]);
+
+  // Auto-play preview videos immediately (with muted fallback if browser blocks unmuted autoplay)
+  useEffect(() => {
+    if (!activeMedia || activeMedia.type !== 'video') return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.currentTime = 0;
+    video.muted = false;
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        video.muted = true;
+        video.play().catch(() => {});
+      });
+    }
+  }, [activeMedia]);
 
   if (!section || !activeMedia) return null;
 
@@ -191,11 +209,13 @@ export const WorkPreviewModal: React.FC<WorkPreviewModalProps> = ({
             )}
             {activeMedia.type === 'video' && (
               <video
+                ref={videoRef}
                 src={activeMedia.src}
                 poster={activeMedia.poster}
+                autoPlay
                 controls
                 playsInline
-                preload="metadata"
+                preload="auto"
                 className="preview-sheet__media preview-sheet__media--video"
               />
             )}
