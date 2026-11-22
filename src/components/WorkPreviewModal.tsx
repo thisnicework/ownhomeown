@@ -31,10 +31,6 @@ export const WorkPreviewModal: React.FC<WorkPreviewModalProps> = ({
   const safeIndex = items.length > 0 ? Math.min(mediaIndex, items.length - 1) : 0;
   const activeMedia = items[safeIndex] ?? null;
 
-  const availableSections = EXHIBITION_SECTIONS.filter(
-    (s) => (s.preview?.items.length ?? 0) > 0
-  );
-
   const switchSection = useCallback(
     (id: SectionId) => {
       setMediaIndex(0);
@@ -45,26 +41,10 @@ export const WorkPreviewModal: React.FC<WorkPreviewModalProps> = ({
 
   const stepMedia = useCallback(
     (dir: -1 | 1) => {
-      if (!section) return;
-      if (items.length > 1) {
-        const nextIdx = safeIndex + dir;
-        if (nextIdx >= 0 && nextIdx < items.length) {
-          setMediaIndex(nextIdx);
-          return;
-        }
-      }
-      if (availableSections.length > 1) {
-        const curSecIdx = availableSections.findIndex((s) => s.id === section.id);
-        if (curSecIdx !== -1) {
-          const nextSec =
-            availableSections[
-              (curSecIdx + dir + availableSections.length) % availableSections.length
-            ];
-          switchSection(nextSec.id);
-        }
-      }
+      if (items.length <= 1) return;
+      setMediaIndex((safeIndex + dir + items.length) % items.length);
     },
-    [section, items.length, safeIndex, availableSections, switchSection]
+    [items.length, safeIndex]
   );
 
   // Body scroll lock & initial focus
@@ -117,7 +97,7 @@ export const WorkPreviewModal: React.FC<WorkPreviewModalProps> = ({
 
   if (!section || !activeMedia) return null;
 
-  const hasMultipleSlides = items.length > 1 || availableSections.length > 1;
+  const hasMultipleSlides = items.length > 1;
   const floorLabel = section.floor === '1F' ? '1F 주主' : '2F 공共';
 
   return (
