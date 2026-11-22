@@ -334,9 +334,9 @@ export const PRODUCTION_CREDITS: CreditRow[] = [
   },
   {
     role: 'SECTION 2',
-    names: ['고다선', '민지은', '송수연', '송시은', '이서윤', '· 사운드 김나연'],
+    names: ['고다선', '민지은', '송수연', '송시은', '이서윤'],
   },
-  { role: 'SECTION 3', names: ['전세원', '홍진택', '· 사운드 권병지'] },
+  { role: 'SECTION 3', names: ['전세원', '홍진택'] },
   { role: 'SECTION 4', names: ['김인건', '이경민', '이정민'] },
 ];
 
