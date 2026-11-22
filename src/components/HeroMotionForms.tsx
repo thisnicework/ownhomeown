@@ -28,8 +28,16 @@ function rand(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-function easeInOutQuart(t: number): number {
-  return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
+function easeInOutSine(t: number): number {
+  return -(Math.cos(Math.PI * t) - 1) / 2;
+}
+
+/**
+ * Viscous wave easing with subtle organic swell (꿀렁거리는 탄성 곡선)
+ */
+function easeViscous(t: number): number {
+  const s = easeInOutSine(t);
+  return s + Math.sin(t * Math.PI * 2) * 0.055 * Math.sin(t * Math.PI);
 }
 
 function mirrorPose(pose: MonolithPose): MonolithPose {
@@ -337,8 +345,9 @@ export const HeroMotionForms: React.FC<HeroMotionFormsProps> = ({
       generateBottomPose(flipBottom, 0),
     ];
 
-    const topCycle = rand(2.1, 2.6);
-    const bottomCycle = rand(2.3, 2.8);
+    // Medium tempo (halfway between previous and fast) with zero dead stops
+    const topCycle = rand(3.6, 4.3);
+    const bottomCycle = rand(3.9, 4.7);
     const topPhase = rand(0, topCycle * topPoses.length);
     const bottomPhase = rand(0, bottomCycle * bottomPoses.length);
     const morphedEdge: Pt[] = Array.from({ length: 15 }, () => [0, 0]);
@@ -410,64 +419,98 @@ export const HeroMotionForms: React.FC<HeroMotionFormsProps> = ({
         isCompact ? 184 : 272
       );
 
-      const overscan = 64;
+      const overscan = 68;
       const drawW = width + overscan * 2;
+      const dir = isTop ? 1 : -1;
+      const tWave = elapsed * 1.45 + (isTop ? 0 : 2.1);
+
       const surgeX =
-        Math.sin((elapsed + phaseShift) * (isTop ? 1.55 : -1.45)) * 24;
+        Math.sin(tWave * 0.9 * dir) * 20 + Math.cos(tWave * 0.55) * 10;
+      const surgeY = Math.sin(tWave * 1.15) * 10;
       const shiftX =
         -overscan + surgeX + (smoothPx - 0.5) * (isTop ? -52 : 52);
       const baseY = isTop
-        ? -scrollOffset + focusBoost * 22
-        : height - bandH + scrollOffset - focusBoost * 22;
+        ? -scrollOffset + focusBoost * 22 + surgeY
+        : height - bandH + scrollOffset - focusBoost * 22 - surgeY;
 
       const totalCycle = (elapsed + phaseShift) / cycleDuration;
       const idx = Math.floor(totalCycle) % poses.length;
       const nextIdx = (idx + 1) % poses.length;
       const raw = totalCycle - Math.floor(totalCycle);
 
-      const hold = 0.05;
-      const morphT =
-        !prefersReduced && raw > hold
-          ? easeInOutQuart(clamp01((raw - hold) / (1 - hold)))
-          : 0;
-
       const from = poses[idx];
       const to = poses[nextIdx];
 
-      // 1. Unified single-path solid #000000 display-type mass
+      // 1. Unified single-path solid #000000 display-type mass with travelling undulation wave (꿀렁거림)
       ctx.fillStyle = '#000000';
       ctx.beginPath();
       if (isTop) {
-        ctx.moveTo(-overscan - 10, -70);
+        ctx.moveTo(-overscan - 10, -80);
       } else {
-        ctx.moveTo(-overscan - 10, height + 70);
+        ctx.moveTo(-overscan - 10, height + 80);
       }
 
-      for (let i = 0; i < from.edge.length; i++) {
+      const nPts = from.edge.length;
+      let prevX = 0;
+
+      for (let i = 0; i < nPts; i++) {
         const [fx, fy] = from.edge[i];
         const [tx, ty] = to.edge[i];
-        const mx = fx + (tx - fx) * morphT;
-        const my = fy + (ty - fy) * morphT;
+
+        // Travelling phase lag across the contour so vertices ripple sequentially like a heavy wave
+        const spatialPhase = isTop ? fx : 1 - fx;
+        const staggerSpan = 0.34;
+        const localRaw = clamp01(
+          (raw - spatialPhase * staggerSpan) / (1 - staggerSpan)
+        );
+        const localT = !prefersReduced ? easeViscous(localRaw) : 0;
+
+        let mx = fx + (tx - fx) * localT;
+        let my = fy + (ty - fy) * localT;
+
+        if (!prefersReduced) {
+          // Horizontal undulation keyed by base x so shared-x vertical walls move together cleanly
+          if (i > 0 && i < nPts - 1) {
+            const xSwell =
+              Math.sin(tWave * 1.25 - fx * 5.2 * dir) * 0.022 +
+              Math.cos(tWave * 0.8 + fx * 3.4) * 0.012;
+            mx = clamp(mx + xSwell, prevX, 0.985);
+          }
+
+          // Vertical multi-harmonic undulation (꿀렁거리는 파동)
+          const ySwell =
+            Math.sin(tWave * 1.4 - fx * 5.8 * dir + i * 0.28) * 0.095 +
+            Math.cos(tWave * 0.95 + i * 0.52) * 0.048;
+          my = clamp(my + ySwell, 0.04, 1.16);
+        }
+
+        prevX = mx;
         morphedEdge[i][0] = mx;
         morphedEdge[i][1] = my;
         ctx.lineTo(shiftX + mx * drawW, baseY + my * bandH);
       }
 
       if (isTop) {
-        ctx.lineTo(width + overscan + 10, -70);
+        ctx.lineTo(width + overscan + 10, -80);
       } else {
-        ctx.lineTo(width + overscan + 10, height + 70);
+        ctx.lineTo(width + overscan + 10, height + 80);
       }
       ctx.closePath();
       ctx.fill();
 
-      // 2. Signature crisp #808080 negative-space counter cutout, dynamically clamped
-      // against the instantaneous morphed contour so the black bridge NEVER pinches thin
+      // 2. Signature crisp #808080 negative-space counter cutout riding the same undulation wave
       const [fcx, fcw, fslant] = from.counterSpec;
       const [tcx, tcw, tslant] = to.counterSpec;
-      const cx = fcx + (tcx - fcx) * morphT;
-      const cw = fcw + (tcw - fcw) * morphT;
-      const slant = fslant + (tslant - fslant) * morphT;
+      const counterT = !prefersReduced ? easeViscous(raw) : 0;
+      const counterSwellX = !prefersReduced
+        ? Math.sin(tWave * 1.2 - 2.4 * dir) * 0.018
+        : 0;
+      const cx = fcx + (tcx - fcx) * counterT + counterSwellX;
+      const cw = fcw + (tcw - fcw) * counterT;
+      const slant =
+        fslant +
+        (tslant - fslant) * counterT +
+        (!prefersReduced ? Math.sin(tWave * 1.35) * 0.014 : 0);
 
       ctx.fillStyle = '#808080';
       ctx.beginPath();
