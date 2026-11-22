@@ -2041,11 +2041,30 @@
   }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 720px) {
   .pdf-wordmark--cover {
-    font-size: clamp(2.45rem, 11vw, 3.3rem);
+    font-size: clamp(3.35rem, 15.2vw, 4.4rem);
   }
 
+  .pdf-meaning-kicker {
+    font-size: 0.9rem;
+  }
+
+  .pdf-meaning-line {
+    font-size: 0.98rem;
+  }
+
+  .pdf-cover-band__subtitle {
+    font-size: clamp(1.04rem, 4.15vw, 1.18rem);
+  }
+
+  .pdf-cover-band__schedule,
+  .pdf-cover-band__venue {
+    font-size: clamp(0.94rem, 3.7vw, 1.04rem);
+  }
+}
+
+@media (max-width: 560px) {
   .pdf-credits-row,
   .pdf-credits-row--wide-dt,
   .pdf-plain-dl>div,
