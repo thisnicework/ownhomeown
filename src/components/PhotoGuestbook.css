@@ -1,0 +1,928 @@
+/* ==========================================================================
+   /photo — Hidden 1-Cut Photo Booth & Guestbook Page
+   Brutalist / Swiss Exhibition Aesthetic (#000000 / #808080 / #ffffff, 0px radius)
+   ========================================================================== */
+
+.photo-page {
+  min-height: 100svh;
+  background: var(--pdf-black);
+  color: var(--ink-on-dark);
+  display: flex;
+  flex-direction: column;
+}
+
+.photo-sr-media {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  left: -9999px;
+  top: -9999px;
+}
+
+/* Header */
+.photo-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  height: 56px;
+  padding: 0 clamp(1rem, 3vw, 2.25rem);
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.photo-header__left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.photo-header__brand {
+  display: inline-flex;
+  align-items: center;
+}
+
+.photo-header__tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  color: var(--ink-on-dark-sub);
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  padding-left: 0.85rem;
+  white-space: nowrap;
+}
+
+.photo-header__nav {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.photo-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  height: 34px;
+  padding: 0 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: var(--ink-on-dark-sub);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  white-space: nowrap;
+}
+
+.photo-tab-btn:hover {
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #ffffff;
+}
+
+.photo-tab-btn.is-active {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  font-weight: 600;
+}
+
+.photo-tab-btn--ext {
+  border-color: rgba(255, 255, 255, 0.32);
+  color: #ffffff;
+}
+
+/* Main Booth Layout — Centered Single Column (Card on Top, Controls Directly Below) */
+.photo-booth {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  margin: 0 auto;
+  padding: clamp(1rem, 2.5vw, 2rem) clamp(1rem, 3vw, 2rem) 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-center-stack {
+  position: relative;
+  z-index: 10;
+  width: min(100%, 660px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+.photo-stage-col,
+.photo-controls-col {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+}
+
+/* Floating Registered Guestbook Cards Around Viewport Edges */
+.photo-float-layer {
+  position: fixed;
+  inset: 56px 0 0 0;
+  pointer-events: none;
+  z-index: 4;
+  overflow: hidden;
+}
+
+.photo-float-card {
+  position: absolute;
+  width: clamp(128px, 11.5vw, 186px);
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: #0a0a0a;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.65);
+  cursor: pointer;
+  pointer-events: auto;
+  overflow: hidden;
+  opacity: 0.78;
+  will-change: transform;
+  animation: photoEdgeFloat var(--float-dur, 8s) ease-in-out var(--float-delay, 0s) infinite alternate;
+  transition: opacity 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+}
+
+.photo-float-card:hover,
+.photo-float-card:focus-visible {
+  opacity: 1;
+  border-color: #ffffff;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.85);
+  z-index: 30;
+  outline: none;
+}
+
+.photo-float-card.is-newest {
+  opacity: 0.96;
+  border-color: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4), 0 18px 46px rgba(0, 0, 0, 0.8);
+  animation:
+    photoFloatEntrance 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards,
+    photoEdgeFloat var(--float-dur, 8s) ease-in-out 0.7s infinite alternate;
+}
+
+.photo-float-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-float-card__caption {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 0.32rem 0.48rem;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0));
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  gap: 0.08rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.photo-float-card:hover .photo-float-card__caption,
+.photo-float-card:focus-visible .photo-float-card__caption,
+.photo-float-card.is-newest .photo-float-card__caption {
+  opacity: 1;
+}
+
+.photo-float-card__caption strong {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.photo-float-card__caption em {
+  font-style: normal;
+  font-size: 0.62rem;
+  color: #d4d4d4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes photoEdgeFloat {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(var(--float-rot, 0deg)) scale(var(--float-scale, 1));
+  }
+  50% {
+    transform: translate3d(calc(var(--float-dx, 8px) * 0.6), var(--float-dy, -10px), 0)
+      rotate(calc(var(--float-rot, 0deg) + 1.4deg)) scale(var(--float-scale, 1));
+  }
+  100% {
+    transform: translate3d(var(--float-dx, 8px), calc(var(--float-dy, -10px) * -0.5), 0)
+      rotate(calc(var(--float-rot, 0deg) - 1.2deg)) scale(var(--float-scale, 1));
+  }
+}
+
+@keyframes photoFloatEntrance {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 26px, 0) rotate(0deg) scale(0.74);
+  }
+  100% {
+    opacity: 0.96;
+    transform: translate3d(0, 0, 0) rotate(var(--float-rot, 0deg)) scale(var(--float-scale, 1));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photo-float-card,
+  .photo-float-card.is-newest {
+    animation: none;
+    transform: rotate(var(--float-rot, 0deg)) scale(var(--float-scale, 1));
+  }
+}
+
+/* 4:3 Landscape Stage Frame */
+.photo-stage-col {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.photo-frame-shell {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--pdf-grey);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+}
+
+.photo-frame-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.photo-countdown {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 6;
+}
+
+.photo-countdown span {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 5rem;
+  font-weight: 500;
+  color: #ffffff;
+  text-shadow: 0 6px 24px rgba(0, 0, 0, 0.7);
+}
+
+.photo-flash {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  z-index: 8;
+  pointer-events: none;
+  animation: photoFlashFade 0.22s ease-out forwards;
+}
+
+@keyframes photoFlashFade {
+  from {
+    opacity: 0.92;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Camera Fallback aligned exactly to the inner 3:2 photo window */
+.photo-camera-fallback {
+  position: absolute;
+  top: 14.5%;
+  bottom: 22.17%;
+  left: 14.375%;
+  right: 14.375%;
+  background: rgba(14, 14, 14, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.6rem;
+  z-index: 5;
+}
+
+.photo-camera-fallback__title {
+  margin: 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.photo-camera-fallback__desc {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #e6e6e6;
+  max-width: 34ch;
+}
+
+.photo-camera-fallback__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+/* Controls Panel */
+.photo-controls-col {
+  width: 100%;
+}
+
+.photo-panel {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #0a0a0a;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+}
+
+.photo-panel__head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.photo-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  color: var(--ink-on-dark-sub);
+}
+
+.photo-kicker--done {
+  color: #ffffff;
+}
+
+.photo-title {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  color: #ffffff;
+}
+
+.photo-sub {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--ink-on-dark-sub);
+}
+
+/* Capture Bar directly underneath the 4:3 card */
+.photo-capture-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+/* Shutter Dock */
+.photo-shutter-dock {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem;
+}
+
+.photo-icon-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 62px;
+  padding: 0.5rem 0.65rem;
+  background: rgba(10, 10, 10, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f2f2f2;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.photo-icon-btn:hover {
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.photo-shutter-btn {
+  width: 74px;
+  height: 74px;
+  padding: 5px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.14s ease, opacity 0.14s ease;
+}
+
+.photo-shutter-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+.photo-shutter-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.photo-shutter-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.photo-shutter-btn__inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #000000;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Option Chips Row */
+.photo-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.photo-panel--compose {
+  gap: 0.95rem;
+  padding: 1.15rem 1.25rem;
+  animation: photoPanelSlideUp 0.24s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.photo-panel--done {
+  gap: 0.85rem;
+  padding: 1.15rem 1.25rem;
+}
+
+.photo-done-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes photoPanelSlideUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.photo-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 38px;
+  padding: 0 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: var(--ink-on-dark-sub);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.photo-chip:hover {
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #ffffff;
+}
+
+.photo-chip.is-active {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: #ffffff;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+/* Form Fields */
+.photo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.photo-field__label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.photo-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #e6e6e6;
+  letter-spacing: 0.01em;
+}
+
+.photo-counter {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--ink-on-dark-sub);
+}
+
+.photo-textarea,
+.photo-input {
+  width: 100%;
+  background: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0;
+  outline: none;
+  transition: border-color 0.16s ease;
+}
+
+.photo-textarea {
+  resize: vertical;
+  min-height: 88px;
+}
+
+.photo-textarea:focus,
+.photo-input:focus {
+  border-color: #ffffff;
+}
+
+.photo-textarea::placeholder,
+.photo-input::placeholder {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+/* Action Buttons */
+.photo-action-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.photo-done-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.photo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  height: 46px;
+  padding: 0 1.1rem;
+  font-size: 0.86rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  border-radius: 0;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.photo-btn--compact {
+  height: 38px;
+  padding: 0 0.9rem;
+  font-size: 0.8rem;
+}
+
+.photo-btn--primary {
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #ffffff;
+  font-weight: 600;
+}
+
+.photo-btn--primary:hover:not(:disabled) {
+  background: #e2e2e2;
+}
+
+.photo-btn--primary:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.photo-btn--secondary {
+  background: #171717;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+.photo-btn--secondary:hover {
+  background: #242424;
+  border-color: #ffffff;
+}
+
+.photo-btn--ghost {
+  background: transparent;
+  color: #e6e6e6;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.photo-btn--ghost:hover {
+  border-color: #ffffff;
+  color: #ffffff;
+}
+
+.photo-toast {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.8rem;
+  color: #ffffff;
+  text-align: center;
+}
+
+/* Guestbook Gallery Archive */
+.photo-gallery-view {
+  flex: 1;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 3vw, 2rem) 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.photo-gallery-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.photo-empty {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 4rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  color: var(--ink-on-dark-sub);
+  text-align: center;
+}
+
+.photo-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.photo-card {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #0a0a0a;
+  display: flex;
+  flex-direction: column;
+}
+
+.photo-card__media {
+  padding: 0;
+  border: 0;
+  background: var(--pdf-grey);
+  cursor: pointer;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  display: block;
+  width: 100%;
+}
+
+.photo-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.28s ease;
+}
+
+.photo-card__media:hover img {
+  transform: scale(1.02);
+}
+
+.photo-card__meta {
+  padding: 0.85rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.photo-card__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.photo-card__author {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.photo-card__date {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--ink-on-dark-sub);
+}
+
+.photo-card__msg {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #d4d4d4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.photo-gallery-footer {
+  margin-top: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.photo-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: var(--ink-on-dark-sub);
+}
+
+.photo-back-link:hover {
+  color: #ffffff;
+}
+
+/* Lightbox */
+.photo-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.photo-lightbox__box {
+  position: relative;
+  width: min(100%, 820px);
+  max-height: 92svh;
+  overflow-y: auto;
+  background: #0b0b0b;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  display: flex;
+  flex-direction: column;
+}
+
+.photo-lightbox__close {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.78);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.photo-lightbox__img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.photo-lightbox__info {
+  padding: 1rem 1.15rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.photo-lightbox__msg {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: #ececec;
+  white-space: pre-wrap;
+}
+
+.photo-lightbox__footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.photo-lightbox__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Mobile Responsive */
+@media (max-width: 900px) {
+  .photo-header__tag {
+    display: none;
+  }
+
+  .photo-booth {
+    padding: 0.85rem 0.85rem 2.25rem;
+    align-items: flex-start;
+  }
+
+  .photo-center-stack {
+    gap: 0.9rem;
+  }
+
+  .photo-frame-shell {
+    width: 100%;
+  }
+
+  .photo-camera-fallback {
+    inset: 6% 8%;
+    padding: 0.75rem;
+    gap: 0.4rem;
+  }
+
+  .photo-camera-fallback__desc {
+    font-size: 0.74rem;
+  }
+
+  .photo-camera-fallback__actions .photo-btn {
+    height: 36px;
+    font-size: 0.76rem;
+    padding: 0 0.75rem;
+  }
+
+  .photo-gallery-grid {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+  }
+
+  /* On compact mobile viewports, keep floating cards subtle along bottom/top edges */
+  .photo-float-card {
+    width: 104px;
+    opacity: 0.52;
+  }
+
+  .photo-float-card:nth-child(n + 5) {
+    display: none;
+  }
+}

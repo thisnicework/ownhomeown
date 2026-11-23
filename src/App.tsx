@@ -6,12 +6,36 @@ import { PosterSection } from './components/PosterSection';
 import { SectionsShowcase } from './components/SectionsShowcase';
 import { CreditsSection } from './components/CreditsSection';
 import { VisitAndSponsors } from './components/VisitAndSponsors';
+import { PhotoGuestbookPage } from './components/PhotoGuestbookPage';
 import './App.css';
 
+function isPhotoRoute(): boolean {
+  if (typeof window === 'undefined') return false;
+  const normalized = window.location.pathname.replace(/\/+$/, '') || '/';
+  return normalized === '/photo';
+}
+
 export function App() {
+  const [onPhotoPage, setOnPhotoPage] = useState<boolean>(() => isPhotoRoute());
   const [activeSectionId, setActiveSectionId] = useState<string>('overview');
 
   useEffect(() => {
+    const syncRoute = () => setOnPhotoPage(isPhotoRoute());
+    window.addEventListener('popstate', syncRoute);
+    return () => window.removeEventListener('popstate', syncRoute);
+  }, []);
+
+  useEffect(() => {
+    if (onPhotoPage) {
+      document.title = '포토 방명록 | ⟪공과 주⟫ 공共과 주主';
+      return;
+    }
+    document.title =
+      '⟪공과 주⟫ 공共과 주主 | 서울예술대학교 학사학위 전공심화과정 독립창작프로젝트';
+  }, [onPhotoPage]);
+
+  useEffect(() => {
+    if (onPhotoPage) return;
     const ids = NAV_ITEMS.map((item) => item.id);
     const elements = ids
       .map((id) => document.getElementById(id))
@@ -36,7 +60,11 @@ export function App() {
 
     elements.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, []);
+  }, [onPhotoPage]);
+
+  if (onPhotoPage) {
+    return <PhotoGuestbookPage />;
+  }
 
   return (
     <div className="app-shell">
