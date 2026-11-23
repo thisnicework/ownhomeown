@@ -12,7 +12,6 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { GongJuTitleLockup } from './TitleLockup';
 import {
   createFrameMonolithSet,
   FRAME_H,
@@ -467,44 +466,6 @@ export const PhotoGuestbookPage: React.FC = () => {
         className="photo-sr-media"
         aria-hidden="true"
       />
-
-      {/* Minimal Architectural Header */}
-      <header className="photo-header">
-        <div className="photo-header__left">
-          <a href="/" className="photo-header__brand" aria-label="전시 메인으로">
-            <GongJuTitleLockup size="nav" tone="light" />
-          </a>
-          <span className="photo-header__tag">PHOTO / 1-CUT</span>
-        </div>
-
-        <nav className="photo-header__nav" aria-label="포토 방명록 메뉴">
-          <button
-            type="button"
-            className={`photo-tab-btn ${activeTab === 'booth' ? 'is-active' : ''}`}
-            onClick={() => setActiveTab('booth')}
-          >
-            <Camera size={14} aria-hidden="true" />
-            <span>촬영</span>
-          </button>
-          <button
-            type="button"
-            className={`photo-tab-btn ${activeTab === 'gallery' ? 'is-active' : ''}`}
-            onClick={() => setActiveTab('gallery')}
-          >
-            <BookOpen size={14} aria-hidden="true" />
-            <span>방명록 ({entries.length})</span>
-          </button>
-          {integration.returnUrl && (
-            <a
-              href={integration.returnUrl}
-              className="photo-tab-btn photo-tab-btn--ext"
-            >
-              <ExternalLink size={14} aria-hidden="true" />
-              <span>방명록 사이트</span>
-            </a>
-          )}
-        </nav>
-      </header>
 
       {/* Main Content */}
       {activeTab === 'booth' ? (
