@@ -1,8 +1,9 @@
-import { del, list, put } from '@vercel/blob';
+import { del, get, list, put } from '@vercel/blob';
 
 interface StoredGuestbookEntry {
   id: string;
   imageUrl: string;
+  imagePathname?: string;
   message: string;
   filter: string;
   createdAt: string;
@@ -28,16 +29,98 @@ function hasBlobStorage(): boolean {
   );
 }
 
+/** Uploads to Vercel Blob supporting both public and private stores automatically */
+async function putAutoAccess(
+  pathname: string,
+  body: Buffer | string,
+  contentType: string
+): Promise<{ url: string; pathname: string; access: 'public' | 'private' }> {
+  try {
+    const blob = await put(pathname, body, {
+      access: 'public',
+      contentType,
+      addRandomSuffix: false,
+      allowOverwrite: true,
+    });
+    return { url: blob.url, pathname: blob.pathname, access: 'public' };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/private/i.test(msg) || /access/i.test(msg)) {
+      const blob = await put(pathname, body, {
+        access: 'private',
+        contentType,
+        addRandomSuffix: false,
+        allowOverwrite: true,
+      });
+      return { url: blob.url, pathname: blob.pathname, access: 'private' };
+    }
+    throw err;
+  }
+}
+
+/** Reads a JSON blob from either a public or private Vercel Blob store */
+async function readJsonBlob(
+  url: string,
+  pathname: string
+): Promise<Partial<StoredGuestbookEntry> | null> {
+  try {
+    const res = await fetch(url);
+    if (res.ok) {
+      return (await res.json()) as Partial<StoredGuestbookEntry>;
+    }
+  } catch {
+    // Fall through to private get()
+  }
+
+  try {
+    const result = await get(pathname, { access: 'private' });
+    if (result && result.statusCode === 200 && result.stream) {
+      const text = await new Response(result.stream).text();
+      return JSON.parse(text) as Partial<StoredGuestbookEntry>;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 /**
  * GET /api/photo-guestbook
- * Lists recent 4:3 exhibition photo guestbook cards stored in Vercel Blob.
+ * - With ?image=<pathname>: streams a stored private/public guestbook image
+ * - Without query: lists recent 4:3 exhibition photo guestbook cards stored in Vercel Blob
  */
-export async function GET(): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
   if (!hasBlobStorage()) {
-    return jsonResponse(
-      { error: 'BLOB_NOT_CONFIGURED', entries: [] },
-      503
-    );
+    return jsonResponse({ error: 'BLOB_NOT_CONFIGURED', entries: [] }, 503);
+  }
+
+  const url = new URL(request.url);
+  const imagePathname = url.searchParams.get('image')?.trim();
+
+  // Stream image proxy for private Blob stores
+  if (imagePathname) {
+    if (
+      !imagePathname.startsWith(IMAGE_PREFIX) ||
+      imagePathname.includes('..')
+    ) {
+      return jsonResponse({ error: 'INVALID_IMAGE_PATH' }, 400);
+    }
+    try {
+      const result = await get(imagePathname, { access: 'private' });
+      if (!result || result.statusCode !== 200 || !result.stream) {
+        return jsonResponse({ error: 'NOT_FOUND' }, 404);
+      }
+      return new Response(result.stream, {
+        status: 200,
+        headers: {
+          'Content-Type': result.blob.contentType || 'image/jpeg',
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+      });
+    } catch (err) {
+      console.error('[api/photo-guestbook GET image] failed:', err);
+      return jsonResponse({ error: 'FAILED_TO_READ_IMAGE' }, 500);
+    }
   }
 
   try {
@@ -53,21 +136,16 @@ export async function GET(): Promise<Response> {
 
     const fetched = await Promise.all(
       sortedBlobs.map(async (blob): Promise<StoredGuestbookEntry | null> => {
-        try {
-          const res = await fetch(blob.url);
-          if (!res.ok) return null;
-          const data = (await res.json()) as Partial<StoredGuestbookEntry>;
-          if (!data.id || !data.imageUrl || !data.createdAt) return null;
-          return {
-            id: data.id,
-            imageUrl: data.imageUrl,
-            message: typeof data.message === 'string' ? data.message : '',
-            filter: typeof data.filter === 'string' ? data.filter : 'kinetic',
-            createdAt: data.createdAt,
-          };
-        } catch {
-          return null;
-        }
+        const data = await readJsonBlob(blob.url, blob.pathname);
+        if (!data || !data.id || !data.imageUrl || !data.createdAt) return null;
+        return {
+          id: data.id,
+          imageUrl: data.imageUrl,
+          imagePathname: data.imagePathname,
+          message: typeof data.message === 'string' ? data.message : '',
+          filter: typeof data.filter === 'string' ? data.filter : 'kinetic',
+          createdAt: data.createdAt,
+        };
       })
     );
 
@@ -103,18 +181,21 @@ export async function POST(request: Request): Promise<Response> {
       createdAt?: string;
     };
 
-    const imageDataUrl = typeof body.imageDataUrl === 'string' ? body.imageDataUrl : '';
-    const match = imageDataUrl.match(/^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/);
+    const imageDataUrl =
+      typeof body.imageDataUrl === 'string' ? body.imageDataUrl : '';
+    const match = imageDataUrl.match(
+      /^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/
+    );
     if (!match) {
       return jsonResponse({ error: 'INVALID_IMAGE_DATA' }, 400);
     }
 
-    const ext = match[1] === 'png' ? 'png' : match[1] === 'webp' ? 'webp' : 'jpg';
+    const ext =
+      match[1] === 'png' ? 'png' : match[1] === 'webp' ? 'webp' : 'jpg';
     const contentType =
       ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
     const imageBuffer = Buffer.from(match[2], 'base64');
 
-    // Guard against oversized payloads (Vercel Function body cap is 4.5 MB)
     if (imageBuffer.byteLength > 3_800_000) {
       return jsonResponse({ error: 'IMAGE_TOO_LARGE' }, 413);
     }
@@ -124,40 +205,55 @@ export async function POST(request: Request): Promise<Response> {
         ? body.id
         : `oho-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
     const createdAt =
-      typeof body.createdAt === 'string' && !Number.isNaN(Date.parse(body.createdAt))
+      typeof body.createdAt === 'string' &&
+      !Number.isNaN(Date.parse(body.createdAt))
         ? body.createdAt
         : new Date().toISOString();
     const message =
       typeof body.message === 'string' ? body.message.trim().slice(0, 120) : '';
     const filter =
-      typeof body.filter === 'string' ? body.filter.trim().slice(0, 24) : 'kinetic';
+      typeof body.filter === 'string'
+        ? body.filter.trim().slice(0, 24)
+        : 'kinetic';
 
-    // 1. Upload image binary to Vercel Blob
-    const imageBlob = await put(`${IMAGE_PREFIX}${rawId}.${ext}`, imageBuffer, {
-      access: 'public',
-      contentType,
-      addRandomSuffix: false,
-    });
+    // 1. Upload image binary to Vercel Blob (auto-handles public or private store)
+    const imageBlob = await putAutoAccess(
+      `${IMAGE_PREFIX}${rawId}.${ext}`,
+      imageBuffer,
+      contentType
+    );
+
+    const resolvedImageUrl =
+      imageBlob.access === 'private'
+        ? `/api/photo-guestbook?image=${encodeURIComponent(imageBlob.pathname)}`
+        : imageBlob.url;
 
     // 2. Upload entry metadata JSON to Vercel Blob
     const entry: StoredGuestbookEntry = {
       id: rawId,
-      imageUrl: imageBlob.url,
+      imageUrl: resolvedImageUrl,
+      imagePathname: imageBlob.pathname,
       message,
       filter,
       createdAt,
     };
 
-    await put(`${ENTRY_PREFIX}${rawId}.json`, JSON.stringify(entry), {
-      access: 'public',
-      contentType: 'application/json; charset=utf-8',
-      addRandomSuffix: false,
-    });
+    await putAutoAccess(
+      `${ENTRY_PREFIX}${rawId}.json`,
+      JSON.stringify(entry),
+      'application/json; charset=utf-8'
+    );
 
     return jsonResponse({ entry }, 201);
   } catch (err) {
     console.error('[api/photo-guestbook POST] failed:', err);
-    return jsonResponse({ error: 'FAILED_TO_SAVE' }, 500);
+    return jsonResponse(
+      {
+        error: 'FAILED_TO_SAVE',
+        detail: err instanceof Error ? err.message : 'Unknown error',
+      },
+      500
+    );
   }
 }
 
