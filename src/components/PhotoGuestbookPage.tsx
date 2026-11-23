@@ -62,16 +62,20 @@ interface EdgeFloatSlot {
 
 /** Curated perimeter anchor slots so floating cards frame the edges without obstructing the center booth */
 const EDGE_FLOAT_SLOTS: EdgeFloatSlot[] = [
-  { top: '10%', left: '2%', rotate: -3.2, duration: 7.4, delay: 0.0, driftX: 8, driftY: -12, scale: 1.0 },
-  { top: '12%', right: '2%', rotate: 2.8, duration: 8.1, delay: -1.6, driftX: -9, driftY: -10, scale: 0.98 },
-  { top: '44%', left: '1.5%', rotate: 2.1, duration: 8.8, delay: -2.9, driftX: 7, driftY: -14, scale: 0.94 },
-  { top: '46%', right: '1.5%', rotate: -2.3, duration: 8.3, delay: -4.0, driftX: -7, driftY: 13, scale: 0.94 },
-  { bottom: '6%', left: '2.2%', rotate: 2.5, duration: 7.8, delay: -2.2, driftX: 10, driftY: 11, scale: 0.96 },
-  { bottom: '7%', right: '2.2%', rotate: -2.9, duration: 8.6, delay: -0.9, driftX: -8, driftY: 12, scale: 1.0 },
-  { bottom: '4%', left: '18%', rotate: -1.8, duration: 7.9, delay: -1.2, driftX: 9, driftY: -9, scale: 0.88 },
-  { bottom: '4%', right: '18%', rotate: 2.1, duration: 8.4, delay: -2.8, driftX: -9, driftY: -10, scale: 0.88 },
-  { top: '7.5%', left: '17%', rotate: 1.6, duration: 8.8, delay: -3.7, driftX: 8, driftY: 8, scale: 0.85 },
-  { top: '7.5%', right: '17%', rotate: -1.7, duration: 9.2, delay: -0.5, driftX: -8, driftY: 9, scale: 0.85 },
+  { top: '10%', left: '2.5%', rotate: -3.2, duration: 7.4, delay: 0.0, driftX: 8, driftY: -12, scale: 1.05 },
+  { top: '12%', right: '2.5%', rotate: 2.8, duration: 8.1, delay: -1.6, driftX: -9, driftY: -10, scale: 0.96 },
+  { bottom: '7%', left: '2.5%', rotate: 2.5, duration: 7.8, delay: -2.2, driftX: 10, driftY: 11, scale: 0.87 },
+  { bottom: '8%', right: '2.5%', rotate: -2.9, duration: 8.6, delay: -0.9, driftX: -8, driftY: 12, scale: 0.79 },
+  { top: '44%', left: '1.8%', rotate: 2.1, duration: 8.8, delay: -2.9, driftX: 7, driftY: -14, scale: 0.72 },
+  { top: '46%', right: '1.8%', rotate: -2.3, duration: 8.3, delay: -4.0, driftX: -7, driftY: 13, scale: 0.65 },
+  { bottom: '4%', left: '19%', rotate: -1.8, duration: 7.9, delay: -1.2, driftX: 9, driftY: -9, scale: 0.59 },
+  { bottom: '4%', right: '19%', rotate: 2.1, duration: 8.4, delay: -2.8, driftX: -9, driftY: -10, scale: 0.53 },
+  { top: '6%', left: '18%', rotate: 1.6, duration: 8.8, delay: -3.7, driftX: 8, driftY: 8, scale: 0.48 },
+  { top: '6%', right: '18%', rotate: -1.7, duration: 9.2, delay: -0.5, driftX: -8, driftY: 9, scale: 0.43 },
+  { top: '28%', left: '1.2%', rotate: -2.6, duration: 9.0, delay: -1.9, driftX: 6, driftY: 9, scale: 0.39 },
+  { top: '28%', right: '1.2%', rotate: 2.4, duration: 9.4, delay: -3.2, driftX: -6, driftY: -8, scale: 0.35 },
+  { bottom: '23%', left: '1.4%', rotate: 1.9, duration: 8.9, delay: -2.4, driftX: 6, driftY: -7, scale: 0.32 },
+  { bottom: '23%', right: '1.4%', rotate: -2.1, duration: 9.5, delay: -1.1, driftX: -6, driftY: 7, scale: 0.29 },
 ];
 
 const SHUTTER_TIMER_SEC = 3;
@@ -657,17 +661,22 @@ export const PhotoGuestbookPage: React.FC = () => {
               {entries.slice(0, EDGE_FLOAT_SLOTS.length).map((entry, idx) => {
                 const slot = EDGE_FLOAT_SLOTS[idx];
                 const isNewest = entry.id === newestEntryId;
+                // Older entries (higher idx) progressively shrink & recede slightly in opacity
+                const ageScale = Math.max(0.28, Math.pow(0.9, idx));
+                const ageOpacity = Math.max(0.38, 0.88 - idx * 0.038);
                 const style: React.CSSProperties = {
                   top: slot.top,
                   bottom: slot.bottom,
                   left: slot.left,
                   right: slot.right,
+                  zIndex: EDGE_FLOAT_SLOTS.length - idx,
                   '--float-rot': `${slot.rotate}deg`,
                   '--float-dx': `${slot.driftX}px`,
                   '--float-dy': `${slot.driftY}px`,
                   '--float-dur': `${slot.duration}s`,
                   '--float-delay': `${slot.delay}s`,
-                  '--float-scale': slot.scale,
+                  '--float-scale': Number(ageScale.toFixed(3)),
+                  '--float-opacity': Number(ageOpacity.toFixed(2)),
                 } as React.CSSProperties;
 
                 return (
@@ -773,9 +782,8 @@ export const PhotoGuestbookPage: React.FC = () => {
                           type="button"
                           role="radio"
                           aria-checked={activeFilter === filterId}
-                          className={`photo-filter-opt ${
-                            activeFilter === filterId ? 'is-active' : ''
-                          }`}
+                          className={`photo-filter-opt ${activeFilter === filterId ? 'is-active' : ''
+                            }`}
                           onClick={() => handleSelectFilter(filterId)}
                         >
                           {filterId}
