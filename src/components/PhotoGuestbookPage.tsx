@@ -76,6 +76,9 @@ const EDGE_FLOAT_SLOTS: EdgeFloatSlot[] = [
 ];
 
 const SHUTTER_TIMER_SEC = 3;
+const VERSION_POLL_MS = 20_000;
+
+declare const __APP_BUILD_VERSION__: string;
 
 export const PhotoGuestbookPage: React.FC = () => {
   const integration = useMemo(() => getGuestbookIntegrationConfig(), []);
@@ -228,6 +231,55 @@ export const PhotoGuestbookPage: React.FC = () => {
       engine.dispose();
       filterEngineRef.current = null;
     };
+  }, []);
+
+  // Auto-reload /photo when a new deployment goes live (only while idle)
+  const pendingReloadRef = useRef<boolean>(false);
+  const isIdleForReload =
+    activeTab === 'booth' &&
+    stage === 'capture' &&
+    countdown === null &&
+    !submitting &&
+    lightboxEntry === null;
+  const isIdleForReloadRef = useRef<boolean>(isIdleForReload);
+
+  useEffect(() => {
+    isIdleForReloadRef.current = isIdleForReload;
+    if (isIdleForReload && pendingReloadRef.current) {
+      window.location.reload();
+    }
+  }, [isIdleForReload]);
+
+  useEffect(() => {
+    if (import.meta.env.DEV) return;
+    const currentVersion =
+      typeof __APP_BUILD_VERSION__ === 'string' ? __APP_BUILD_VERSION__ : '';
+    if (!currentVersion) return;
+
+    const checkVersion = async () => {
+      try {
+        const res = await fetch(`/version.json?t=${Date.now()}`, {
+          cache: 'no-store',
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { version?: string };
+        if (data.version && data.version !== currentVersion) {
+          if (isIdleForReloadRef.current) {
+            window.location.reload();
+          } else {
+            pendingReloadRef.current = true;
+          }
+        }
+      } catch {
+        // Ignore transient network hiccups
+      }
+    };
+
+    const id = window.setInterval(() => {
+      void checkVersion();
+    }, VERSION_POLL_MS);
+
+    return () => window.clearInterval(id);
   }, []);
 
   // Load persisted photo guestbook entries from Vercel Blob on mount
