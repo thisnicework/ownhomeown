@@ -589,31 +589,36 @@ export function renderExhibitionPhotoFrame(
   drawHorizontalMonolith(ctx, monoliths.topPoses, true, elapsedSec, 4.0, 0.6, 225);
   drawHorizontalMonolith(ctx, monoliths.bottomPoses, false, elapsedSec, 4.4, 2.9, 225);
 
-  // 3. Sharp 90-degree drop shadow + matte bezel + subtle 2px rim highlight
+  // 3. Soft multi-layer ambient shadow + matte bezel so the camera window settles organically into the #808080 sculpture
   const bx = SCR_X - BEZEL;
   const by = SCR_Y - BEZEL;
   const bw = SCR_W + BEZEL * 2;
   const bh = SCR_H + BEZEL * 2;
 
   if (fastPreview) {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
-    ctx.fillRect(bx - 10, by + 12, bw + 20, bh + 16);
-    ctx.fillStyle = '#0e0e0e';
+    // 3-step concentric soft ambient shadow rings (fast fillRects, zero GPU blur cost)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+    ctx.fillRect(bx - 22, by - 14, bw + 44, bh + 38);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
+    ctx.fillRect(bx - 12, by - 6, bw + 24, bh + 22);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.24)';
+    ctx.fillRect(bx - 5, by - 2, bw + 10, bh + 10);
+    ctx.fillStyle = '#0d0d0d';
     ctx.fillRect(bx, by, bw, bh);
   } else {
     ctx.save();
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.62)';
-    ctx.shadowBlur = 46;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.56)';
+    ctx.shadowBlur = 44;
     ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 18;
-    ctx.fillStyle = '#0e0e0e';
+    ctx.shadowOffsetY = 10;
+    ctx.fillStyle = '#0d0d0d';
     ctx.fillRect(bx, by, bw, bh);
     ctx.restore();
   }
 
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(bx + 0.75, by + 0.75, bw - 1.5, bh - 1.5);
 
   // 4. Centered 1-cut landscape photo viewport (sharp 90-degree corners)
   ctx.save();
@@ -660,6 +665,24 @@ export function renderExhibitionPhotoFrame(
     }
     ctx.restore();
   }
+
+  // 4b. Soft inner radial vignette + edge feathering so the camera image blends seamlessly into the dark bezel & monoliths
+  const cx = SCR_X + SCR_W * 0.5;
+  const cy = SCR_Y + SCR_H * 0.5;
+  const outerR = Math.hypot(SCR_W * 0.55, SCR_H * 0.55);
+  const vigGrad = ctx.createRadialGradient(cx, cy, outerR * 0.45, cx, cy, outerR);
+  vigGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  vigGrad.addColorStop(0.7, 'rgba(0, 0, 0, 0.16)');
+  vigGrad.addColorStop(1, 'rgba(0, 0, 0, 0.58)');
+  ctx.fillStyle = vigGrad;
+  ctx.fillRect(SCR_X, SCR_Y, SCR_W, SCR_H);
+
+  // Subtle top & side inner edge feathering
+  const topFeather = ctx.createLinearGradient(0, SCR_Y, 0, SCR_Y + 56);
+  topFeather.addColorStop(0, 'rgba(0, 0, 0, 0.42)');
+  topFeather.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = topFeather;
+  ctx.fillRect(SCR_X, SCR_Y, SCR_W, 56);
 
   // 5. Editorial guestbook text + sequential #001 number & date at bottom of 3:2 photo
   const trimmedMsg = message.trim();
@@ -733,7 +756,33 @@ export function renderExhibitionPhotoFrame(
 
   ctx.restore();
 
-  // 6. Official "공共과 주主" wordmark on top & optically centered "ownhomeown.com" on bottom
+  // 6. Subtle outer edge vignette on the 4:3 card so the grey/black monoliths dissolve smoothly into the surrounding space
+  const edgeFade = 42;
+  const topOut = ctx.createLinearGradient(0, 0, 0, edgeFade);
+  topOut.addColorStop(0, 'rgba(0, 0, 0, 0.72)');
+  topOut.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = topOut;
+  ctx.fillRect(0, 0, FRAME_W, edgeFade);
+
+  const botOut = ctx.createLinearGradient(0, FRAME_H - edgeFade, 0, FRAME_H);
+  botOut.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  botOut.addColorStop(1, 'rgba(0, 0, 0, 0.72)');
+  ctx.fillStyle = botOut;
+  ctx.fillRect(0, FRAME_H - edgeFade, FRAME_W, edgeFade);
+
+  const leftOut = ctx.createLinearGradient(0, 0, edgeFade, 0);
+  leftOut.addColorStop(0, 'rgba(0, 0, 0, 0.72)');
+  leftOut.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = leftOut;
+  ctx.fillRect(0, 0, edgeFade, FRAME_H);
+
+  const rightOut = ctx.createLinearGradient(FRAME_W - edgeFade, 0, FRAME_W, 0);
+  rightOut.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  rightOut.addColorStop(1, 'rgba(0, 0, 0, 0.72)');
+  ctx.fillStyle = rightOut;
+  ctx.fillRect(FRAME_W - edgeFade, 0, edgeFade, FRAME_H);
+
+  // 7. Official "공共과 주主" wordmark on top & optically centered "ownhomeown.com" on bottom
   drawGongJuWordmark(ctx, 86, 54, fastPreview);
   drawTrackedDomain(ctx, 'ownhomeown.com', 1072, fastPreview);
 
