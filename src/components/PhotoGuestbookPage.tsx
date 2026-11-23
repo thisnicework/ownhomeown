@@ -182,7 +182,7 @@ export const PhotoGuestbookPage: React.FC = () => {
         const video = videoRef.current;
         if (video) {
           video.srcObject = stream;
-          await video.play().catch(() => {});
+          await video.play().catch(() => { });
         }
         if (!cancelled) {
           setCameraStatus('ready');
@@ -617,11 +617,7 @@ export const PhotoGuestbookPage: React.FC = () => {
                     aria-label="3초 타이머 촬영"
                   >
                     <span className="photo-shutter-btn__inner">
-                      {countdown !== null ? (
-                        countdown
-                      ) : (
-                        <Camera size={24} aria-hidden="true" />
-                      )}
+                      {countdown !== null ? countdown : null}
                     </span>
                   </button>
 
@@ -636,9 +632,8 @@ export const PhotoGuestbookPage: React.FC = () => {
                           type="button"
                           role="radio"
                           aria-checked={activeFilter === filterId}
-                          className={`photo-filter-opt ${
-                            activeFilter === filterId ? 'is-active' : ''
-                          }`}
+                          className={`photo-filter-opt ${activeFilter === filterId ? 'is-active' : ''
+                            }`}
                           onClick={() => handleSelectFilter(filterId)}
                         >
                           {filterId}
