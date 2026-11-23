@@ -6,12 +6,9 @@ import {
   Check,
   Download,
   ExternalLink,
-  FlipHorizontal2,
-  ImagePlus,
   RefreshCw,
   RotateCcw,
   Share2,
-  Sparkles,
   Trash2,
   X,
 } from 'lucide-react';
@@ -37,13 +34,11 @@ import './PhotoGuestbook.css';
 
 type BoothStage = 'capture' | 'compose' | 'done';
 type ActiveTab = 'booth' | 'gallery';
-type FacingMode = 'user' | 'environment';
 
 interface CapturedPhoto {
   image: HTMLImageElement;
   width: number;
   height: number;
-  /** Frozen elapsed time so monolith frame stays locked unless user randomizes */
   frozenElapsedSec: number;
 }
 
@@ -85,10 +80,7 @@ export const PhotoGuestbookPage: React.FC = () => {
   // Camera state
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
-  const [facingMode, setFacingMode] = useState<FacingMode>('user');
-  const [mirror, setMirror] = useState<boolean>(true);
   const [cameraStatus, setCameraStatus] = useState<
     'idle' | 'starting' | 'ready' | 'error'
   >('idle');
@@ -96,17 +88,15 @@ export const PhotoGuestbookPage: React.FC = () => {
   const [cameraRetryKey, setCameraRetryKey] = useState<number>(0);
 
   // Booth & frame state
-  const [grayscale, setGrayscale] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [flashActive, setFlashActive] = useState<boolean>(false);
-  const [monoliths, setMonoliths] = useState<FrameMonolithSet>(() =>
+  const [monoliths] = useState<FrameMonolithSet>(() =>
     createFrameMonolithSet(20261125)
   );
   const [captured, setCaptured] = useState<CapturedPhoto | null>(null);
 
   // Guestbook compose state (message only, no nickname)
   const [message, setMessage] = useState<string>('');
-  const [showCaption, setShowCaption] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [lastSubmitSynced, setLastSubmitSynced] = useState<boolean>(false);
   const [shareFeedback, setShareFeedback] = useState<string>('');
@@ -155,9 +145,7 @@ export const PhotoGuestbookPage: React.FC = () => {
       ) {
         if (!cancelled) {
           setCameraStatus('error');
-          setCameraError(
-            '이 브라우저에서는 카메라를 지원하지 않습니다. 앨범에서 사진을 불러와 주세요.'
-          );
+          setCameraError('이 브라우저에서는 카메라를 지원하지 않습니다.');
         }
         return;
       }
@@ -170,7 +158,7 @@ export const PhotoGuestbookPage: React.FC = () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: { ideal: facingMode },
+            facingMode: { ideal: 'user' },
             width: { ideal: 1500 },
             height: { ideal: 1000 },
             aspectRatio: { ideal: 3 / 2 },
@@ -195,8 +183,8 @@ export const PhotoGuestbookPage: React.FC = () => {
         setCameraStatus('error');
         const msg =
           err instanceof DOMException && err.name === 'NotAllowedError'
-            ? '카메라 권한이 거부되었습니다. 권한을 허용하거나 앨범에서 사진을 선택해 주세요.'
-            : '카메라를 연결할 수 없습니다. 앨범에서 사진을 불러와 바로 프레임을 적용할 수 있습니다.';
+            ? '카메라 권한을 허용해 주세요.'
+            : '카메라를 연결할 수 없습니다.';
         setCameraError(msg);
       }
     };
@@ -207,7 +195,7 @@ export const PhotoGuestbookPage: React.FC = () => {
       cancelled = true;
       stopCamera();
     };
-  }, [activeTab, stage, facingMode, cameraRetryKey, stopCamera]);
+  }, [activeTab, stage, cameraRetryKey, stopCamera]);
 
   // Auto-focus message textarea immediately when entering compose stage
   useEffect(() => {
@@ -247,8 +235,8 @@ export const PhotoGuestbookPage: React.FC = () => {
         source: hasVideo ? video : null,
         sourceWidth: hasVideo ? video.videoWidth : 0,
         sourceHeight: hasVideo ? video.videoHeight : 0,
-        mirror,
-        grayscale,
+        mirror: true,
+        grayscale: false,
         elapsedSec,
         monoliths,
         showCaption: false,
@@ -257,7 +245,7 @@ export const PhotoGuestbookPage: React.FC = () => {
 
     rafId = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(rafId);
-  }, [activeTab, stage, cameraStatus, mirror, grayscale, monoliths]);
+  }, [activeTab, stage, cameraStatus, monoliths]);
 
   // Render static high-res 1600x1200 preview when composing or done
   useEffect(() => {
@@ -271,37 +259,19 @@ export const PhotoGuestbookPage: React.FC = () => {
         source: captured.image,
         sourceWidth: captured.width,
         sourceHeight: captured.height,
-        mirror,
-        grayscale,
+        mirror: true,
+        grayscale: false,
         elapsedSec: captured.frozenElapsedSec,
         monoliths,
         message,
-        showCaption,
+        showCaption: true,
         dateLabel: todayLabel,
       });
     };
 
     drawTo(previewCanvasRef.current);
     drawTo(exportCanvasRef.current);
-  }, [
-    activeTab,
-    stage,
-    captured,
-    mirror,
-    grayscale,
-    monoliths,
-    message,
-    showCaption,
-    todayLabel,
-  ]);
-
-  const regenerateMonoliths = () => {
-    const nextSeed = Math.floor(Math.random() * 0xffffffff);
-    setMonoliths(createFrameMonolithSet(nextSeed));
-    if (captured) {
-      setCaptured({ ...captured, frozenElapsedSec: Math.random() * 14 });
-    }
-  };
+  }, [activeTab, stage, captured, monoliths, message, todayLabel]);
 
   const triggerShutterFlash = () => {
     setFlashActive(true);
@@ -336,7 +306,7 @@ export const PhotoGuestbookPage: React.FC = () => {
   // Fixed 3-second countdown shutter
   const handleShutterClick = () => {
     if (cameraStatus !== 'ready') {
-      fileInputRef.current?.click();
+      setCameraRetryKey((k) => k + 1);
       return;
     }
     if (countdown !== null) return;
@@ -355,36 +325,6 @@ export const PhotoGuestbookPage: React.FC = () => {
     }, 1000);
     return () => window.clearTimeout(id);
   }, [countdown, captureFromVideo]);
-
-  const handleUploadFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = typeof reader.result === 'string' ? reader.result : '';
-      if (!dataUrl) return;
-      const img = new Image();
-      img.onload = () => {
-        setMirror(false);
-        setCaptured({
-          image: img,
-          width: img.naturalWidth,
-          height: img.naturalHeight,
-          frozenElapsedSec: latestElapsedRef.current || 1.2,
-        });
-        setStage('compose');
-      };
-      img.src = dataUrl;
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  const handleFlipCamera = () => {
-    const next: FacingMode = facingMode === 'user' ? 'environment' : 'user';
-    setFacingMode(next);
-    setMirror(next === 'user');
-  };
 
   const handleRetake = () => {
     setCaptured(null);
@@ -405,12 +345,12 @@ export const PhotoGuestbookPage: React.FC = () => {
         source: captured.image,
         sourceWidth: captured.width,
         sourceHeight: captured.height,
-        mirror,
-        grayscale,
+        mirror: true,
+        grayscale: false,
         elapsedSec: captured.frozenElapsedSec,
         monoliths,
         message,
-        showCaption,
+        showCaption: true,
         dateLabel: todayLabel,
       });
     }
@@ -421,7 +361,7 @@ export const PhotoGuestbookPage: React.FC = () => {
         fullCanvas: exportCanvas,
         message,
         author: '',
-        grayscale,
+        grayscale: false,
       });
       setEntries((prev) => [result.entry, ...prev]);
       setNewestEntryId(result.entry.id);
@@ -460,7 +400,6 @@ export const PhotoGuestbookPage: React.FC = () => {
   const handleResetAll = () => {
     setCaptured(null);
     setMessage('');
-    setShowCaption(true);
     setShareFeedback('');
     setStage('capture');
     setActiveTab('booth');
@@ -482,13 +421,6 @@ export const PhotoGuestbookPage: React.FC = () => {
         height={FRAME_H}
         className="photo-sr-media"
         aria-hidden="true"
-      />
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="photo-sr-media"
-        onChange={handleUploadFile}
       />
 
       {/* Minimal Architectural Header */}
@@ -579,7 +511,7 @@ export const PhotoGuestbookPage: React.FC = () => {
             </aside>
           )}
 
-          {/* Centered Single-Column Booth: 4:3 Card on Top, Shutter / Compose Directly Below */}
+          {/* Centered Single-Column Booth: 4:3 Card on Top, Only Camera Shutter Below */}
           <div className="photo-center-stack">
             <section
               className="photo-stage-col"
@@ -605,31 +537,21 @@ export const PhotoGuestbookPage: React.FC = () => {
                   <div className="photo-flash" aria-hidden="true" />
                 )}
 
-                {/* Camera fallback overlay */}
+                {/* Camera error notice */}
                 {stage === 'capture' && cameraStatus === 'error' && (
                   <div className="photo-camera-fallback">
                     <p className="photo-camera-fallback__title">
                       CAMERA UNAVAILABLE
                     </p>
                     <p className="photo-camera-fallback__desc">{cameraError}</p>
-                    <div className="photo-camera-fallback__actions">
-                      <button
-                        type="button"
-                        className="photo-btn photo-btn--primary photo-btn--compact"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <ImagePlus size={15} aria-hidden="true" />
-                        <span>앨범에서 사진 선택</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="photo-btn photo-btn--ghost photo-btn--compact"
-                        onClick={() => setCameraRetryKey((k) => k + 1)}
-                      >
-                        <RefreshCw size={14} aria-hidden="true" />
-                        <span>카메라 다시 연결</span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      className="photo-btn photo-btn--ghost photo-btn--compact"
+                      onClick={() => setCameraRetryKey((k) => k + 1)}
+                    >
+                      <RefreshCw size={14} aria-hidden="true" />
+                      <span>다시 연결</span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -642,67 +564,21 @@ export const PhotoGuestbookPage: React.FC = () => {
             >
               {stage === 'capture' && (
                 <div className="photo-capture-bar">
-                  <div className="photo-shutter-dock">
-                    <button
-                      type="button"
-                      className="photo-icon-btn"
-                      onClick={() => fileInputRef.current?.click()}
-                      aria-label="앨범에서 사진 불러오기"
-                      title="앨범에서 사진 불러오기"
-                    >
-                      <ImagePlus size={18} aria-hidden="true" />
-                      <span>앨범</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      className="photo-shutter-btn"
-                      onClick={handleShutterClick}
-                      disabled={countdown !== null}
-                      aria-label="3초 타이머 1컷 촬영"
-                    >
-                      <span className="photo-shutter-btn__inner">
-                        {countdown !== null ? countdown : '3s'}
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      className="photo-icon-btn"
-                      onClick={handleFlipCamera}
-                      aria-label="전후면 카메라 전환"
-                      title="전후면 카메라 전환"
-                    >
-                      <RefreshCw size={18} aria-hidden="true" />
-                      <span>전환</span>
-                    </button>
-                  </div>
-
-                  <div className="photo-chip-row">
-                    <button
-                      type="button"
-                      className={`photo-chip ${grayscale ? 'is-active' : ''}`}
-                      onClick={() => setGrayscale((g) => !g)}
-                    >
-                      <span>{grayscale ? '흑백' : '컬러'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={`photo-chip ${mirror ? 'is-active' : ''}`}
-                      onClick={() => setMirror((m) => !m)}
-                    >
-                      <FlipHorizontal2 size={13} aria-hidden="true" />
-                      <span>좌우 반전</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="photo-chip"
-                      onClick={regenerateMonoliths}
-                    >
-                      <Sparkles size={13} aria-hidden="true" />
-                      <span>프레임 변경</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    className="photo-shutter-btn"
+                    onClick={handleShutterClick}
+                    disabled={countdown !== null}
+                    aria-label="3초 타이머 촬영"
+                  >
+                    <span className="photo-shutter-btn__inner">
+                      {countdown !== null ? (
+                        countdown
+                      ) : (
+                        <Camera size={24} aria-hidden="true" />
+                      )}
+                    </span>
+                  </button>
                 </div>
               )}
 
@@ -730,31 +606,6 @@ export const PhotoGuestbookPage: React.FC = () => {
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                     />
-                  </div>
-
-                  <div className="photo-chip-row">
-                    <button
-                      type="button"
-                      className={`photo-chip ${showCaption ? 'is-active' : ''}`}
-                      onClick={() => setShowCaption((v) => !v)}
-                    >
-                      <span>사진에 글 {showCaption ? '표시' : '숨김'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={`photo-chip ${grayscale ? 'is-active' : ''}`}
-                      onClick={() => setGrayscale((g) => !g)}
-                    >
-                      <span>{grayscale ? '흑백' : '컬러'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="photo-chip"
-                      onClick={regenerateMonoliths}
-                    >
-                      <Sparkles size={13} aria-hidden="true" />
-                      <span>프레임 변경</span>
-                    </button>
                   </div>
 
                   <div className="photo-action-row">
