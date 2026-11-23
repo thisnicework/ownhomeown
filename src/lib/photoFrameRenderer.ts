@@ -33,6 +33,8 @@ export interface PhotoFrameOptions {
   showCaption?: boolean;
   /** Optional formatted date stamp (e.g. "2026.11.25") */
   dateLabel?: string;
+  /** Skip expensive software Gaussian shadowBlur during live preview for older CPUs */
+  fastPreview?: boolean;
 }
 
 // Exact 4:3 Landscape photo card (1600x1200) with 3:2 inner photo (1140x760)
@@ -419,7 +421,8 @@ function wrapTextLines(
 function drawGongJuWordmark(
   ctx: CanvasRenderingContext2D,
   centerY: number,
-  baseSize = 54
+  baseSize = 54,
+  fastPreview = false
 ) {
   ctx.save();
   const sans =
@@ -462,10 +465,12 @@ function drawGongJuWordmark(
 
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.88)';
-  ctx.shadowBlur = 18;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 2;
+  if (!fastPreview) {
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.88)';
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2;
+  }
   ctx.fillStyle = '#f5f5f5';
 
   // 공
@@ -499,7 +504,8 @@ function drawGongJuWordmark(
 function drawTrackedDomain(
   ctx: CanvasRenderingContext2D,
   label: string,
-  centerY: number
+  centerY: number,
+  fastPreview = false
 ) {
   ctx.save();
   ctx.font =
@@ -512,11 +518,12 @@ function drawTrackedDomain(
   const totalW = widths.reduce((a, b) => a + b, 0) + tracking * (label.length - 1);
   const startX = (FRAME_W - totalW) / 2;
 
-  // Soft dark halo so text remains 100% legible over both #000000 and #808080 cutouts
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
-  ctx.shadowBlur = 16;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 2;
+  if (!fastPreview) {
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+    ctx.shadowBlur = 16;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2;
+  }
   ctx.fillStyle = '#f5f5f5';
 
   let x = startX;
@@ -550,10 +557,18 @@ export function renderExhibitionPhotoFrame(
     author = '',
     showCaption = true,
     dateLabel,
+    fastPreview = false,
   } = options;
+
+  // Scale automatically when rendering onto a half-res preview canvas (e.g. 800x600)
+  const scaleX = ctx.canvas.width / FRAME_W;
+  const scaleY = ctx.canvas.height / FRAME_H;
 
   // 1. Flat exhibition #808080 canvas
   ctx.save();
+  if (scaleX !== 1 || scaleY !== 1) {
+    ctx.scale(scaleX, scaleY);
+  }
   ctx.fillStyle = '#808080';
   ctx.fillRect(0, 0, FRAME_W, FRAME_H);
 
@@ -569,14 +584,21 @@ export function renderExhibitionPhotoFrame(
   const bw = SCR_W + BEZEL * 2;
   const bh = SCR_H + BEZEL * 2;
 
-  ctx.save();
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.62)';
-  ctx.shadowBlur = 46;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 18;
-  ctx.fillStyle = '#0e0e0e';
-  ctx.fillRect(bx, by, bw, bh);
-  ctx.restore();
+  if (fastPreview) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
+    ctx.fillRect(bx - 10, by + 12, bw + 20, bh + 16);
+    ctx.fillStyle = '#0e0e0e';
+    ctx.fillRect(bx, by, bw, bh);
+  } else {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.62)';
+    ctx.shadowBlur = 46;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 18;
+    ctx.fillStyle = '#0e0e0e';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.restore();
+  }
 
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
   ctx.lineWidth = 2;
@@ -685,8 +707,8 @@ export function renderExhibitionPhotoFrame(
   ctx.restore();
 
   // 6. Official "공共과 주主" wordmark on top & optically centered "ownhomeown.com" on bottom
-  drawGongJuWordmark(ctx, 86, 54);
-  drawTrackedDomain(ctx, 'ownhomeown.com', 1072);
+  drawGongJuWordmark(ctx, 86, 54, fastPreview);
+  drawTrackedDomain(ctx, 'ownhomeown.com', 1072, fastPreview);
 
   ctx.restore();
 }

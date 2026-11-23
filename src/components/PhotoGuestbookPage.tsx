@@ -167,8 +167,8 @@ export const PhotoGuestbookPage: React.FC = () => {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: 'user' },
-            width: { ideal: 1500 },
-            height: { ideal: 1000 },
+            width: { ideal: 960 },
+            height: { ideal: 640 },
             aspectRatio: { ideal: 3 / 2 },
           },
           audio: false,
@@ -215,11 +215,10 @@ export const PhotoGuestbookPage: React.FC = () => {
     }
   }, [activeTab, stage]);
 
-  // Initialize heterotopia 6-filter engine & MediaPipe FaceMesh once on mount
+  // Initialize lightweight heterotopia 6-filter engine (FaceMesh lazy-loads only on tunnel/dizzy)
   useEffect(() => {
-    const engine = new HeterotopiaFilterEngine(900, 600);
+    const engine = new HeterotopiaFilterEngine(642, 428);
     filterEngineRef.current = engine;
-    void engine.initFaceTracker();
     return () => {
       engine.dispose();
       filterEngineRef.current = null;
@@ -284,6 +283,7 @@ export const PhotoGuestbookPage: React.FC = () => {
         elapsedSec,
         monoliths,
         showCaption: false,
+        fastPreview: true,
       });
     };
 
@@ -526,8 +526,8 @@ export const PhotoGuestbookPage: React.FC = () => {
               <div className="photo-frame-shell">
                 <canvas
                   ref={previewCanvasRef}
-                  width={FRAME_W}
-                  height={FRAME_H}
+                  width={FRAME_W / 2}
+                  height={FRAME_H / 2}
                   className="photo-frame-canvas"
                 />
 
