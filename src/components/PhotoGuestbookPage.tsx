@@ -125,6 +125,28 @@ export const PhotoGuestbookPage: React.FC = () => {
   const [lightboxEntry, setLightboxEntry] = useState<GuestbookPhotoEntry | null>(
     null
   );
+  const [lightboxOrigin, setLightboxOrigin] = useState<{
+    dx: number;
+    dy: number;
+    scale: number;
+  }>({ dx: 0, dy: 24, scale: 0.72 });
+
+  const openLightboxFromElement = (
+    entry: GuestbookPhotoEntry,
+    el: HTMLElement | null
+  ) => {
+    if (el && typeof window !== 'undefined') {
+      const rect = el.getBoundingClientRect();
+      const targetW = Math.min(window.innerWidth - 40, 820);
+      const dx = rect.left + rect.width / 2 - window.innerWidth / 2;
+      const dy = rect.top + rect.height / 2 - window.innerHeight / 2;
+      const scale = Math.max(0.18, Math.min(0.85, rect.width / targetW));
+      setLightboxOrigin({ dx, dy, scale });
+    } else {
+      setLightboxOrigin({ dx: 0, dy: 24, scale: 0.72 });
+    }
+    setLightboxEntry(entry);
+  };
 
   // Canvas refs
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -408,6 +430,16 @@ export const PhotoGuestbookPage: React.FC = () => {
     return () => window.cancelAnimationFrame(rafId);
   }, [activeTab, stage, captured, monoliths, message, nextOrderNumber, todayLabel]);
 
+  // Close lightbox on Escape key
+  useEffect(() => {
+    if (!lightboxEntry) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxEntry(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [lightboxEntry]);
+
   // Animate the monolith frame live when viewing any saved card in the lightbox
   useEffect(() => {
     if (!lightboxEntry) return;
@@ -630,7 +662,9 @@ export const PhotoGuestbookPage: React.FC = () => {
                     type="button"
                     className={`photo-float-card ${isNewest ? 'is-newest' : ''}`}
                     style={style}
-                    onClick={() => setLightboxEntry(entry)}
+                    onClick={(e) =>
+                      openLightboxFromElement(entry, e.currentTarget)
+                    }
                     aria-label="등록된 포토 방명록 보기"
                   >
                     <img
@@ -916,7 +950,9 @@ export const PhotoGuestbookPage: React.FC = () => {
                   <button
                     type="button"
                     className="photo-card__media"
-                    onClick={() => setLightboxEntry(entry)}
+                    onClick={(e) =>
+                      openLightboxFromElement(entry, e.currentTarget)
+                    }
                     aria-label="포토 방명록 크게 보기"
                   >
                     <img
@@ -963,6 +999,13 @@ export const PhotoGuestbookPage: React.FC = () => {
         >
           <div
             className="photo-lightbox__box"
+            style={
+              {
+                '--origin-dx': `${lightboxOrigin.dx}px`,
+                '--origin-dy': `${lightboxOrigin.dy}px`,
+                '--origin-scale': lightboxOrigin.scale,
+              } as React.CSSProperties
+            }
             onClick={(e) => e.stopPropagation()}
           >
             <button

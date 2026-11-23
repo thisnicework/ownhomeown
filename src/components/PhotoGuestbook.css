@@ -1038,17 +1038,19 @@
   color: #ffffff;
 }
 
-/* Lightbox */
+/* Lightbox — Frosted Blurred Backdrop + Smooth Origin-to-Center Zoom */
 .photo-lightbox {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.88);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1.25rem;
+  animation: photoLightboxFadeIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .photo-lightbox__box {
@@ -1056,10 +1058,42 @@
   width: min(100%, 820px);
   max-height: 92svh;
   overflow-y: auto;
-  background: #0b0b0b;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(11, 11, 11, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.72);
   display: flex;
   flex-direction: column;
+  will-change: transform, opacity;
+  animation: photoLightboxZoomIn 0.54s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+@keyframes photoLightboxFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+}
+
+@keyframes photoLightboxZoomIn {
+  from {
+    opacity: 0.35;
+    transform: translate3d(
+        var(--origin-dx, 0px),
+        var(--origin-dy, 24px),
+        0
+      )
+      scale(var(--origin-scale, 0.72));
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 
 .photo-lightbox__close {
