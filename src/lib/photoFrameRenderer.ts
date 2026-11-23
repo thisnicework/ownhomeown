@@ -756,33 +756,7 @@ export function renderExhibitionPhotoFrame(
 
   ctx.restore();
 
-  // 6. Subtle outer edge vignette on the 4:3 card so the grey/black monoliths dissolve smoothly into the surrounding space
-  const edgeFade = 42;
-  const topOut = ctx.createLinearGradient(0, 0, 0, edgeFade);
-  topOut.addColorStop(0, 'rgba(0, 0, 0, 0.72)');
-  topOut.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = topOut;
-  ctx.fillRect(0, 0, FRAME_W, edgeFade);
-
-  const botOut = ctx.createLinearGradient(0, FRAME_H - edgeFade, 0, FRAME_H);
-  botOut.addColorStop(0, 'rgba(0, 0, 0, 0)');
-  botOut.addColorStop(1, 'rgba(0, 0, 0, 0.72)');
-  ctx.fillStyle = botOut;
-  ctx.fillRect(0, FRAME_H - edgeFade, FRAME_W, edgeFade);
-
-  const leftOut = ctx.createLinearGradient(0, 0, edgeFade, 0);
-  leftOut.addColorStop(0, 'rgba(0, 0, 0, 0.72)');
-  leftOut.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = leftOut;
-  ctx.fillRect(0, 0, edgeFade, FRAME_H);
-
-  const rightOut = ctx.createLinearGradient(FRAME_W - edgeFade, 0, FRAME_W, 0);
-  rightOut.addColorStop(0, 'rgba(0, 0, 0, 0)');
-  rightOut.addColorStop(1, 'rgba(0, 0, 0, 0.72)');
-  ctx.fillStyle = rightOut;
-  ctx.fillRect(FRAME_W - edgeFade, 0, edgeFade, FRAME_H);
-
-  // 7. Official "공共과 주主" wordmark on top & optically centered "ownhomeown.com" on bottom
+  // 6. Official "공共과 주主" wordmark on top & optically centered "ownhomeown.com" on bottom
   drawGongJuWordmark(ctx, 86, 54, fastPreview);
   drawTrackedDomain(ctx, 'ownhomeown.com', 1072, fastPreview);
 
