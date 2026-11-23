@@ -125,49 +125,25 @@ export const PhotoGuestbookPage: React.FC = () => {
   const [lightboxEntry, setLightboxEntry] = useState<GuestbookPhotoEntry | null>(
     null
   );
-  const [lightboxClosing, setLightboxClosing] = useState<boolean>(false);
-  const lightboxCloseTimerRef = useRef<number | null>(null);
   const [lightboxOrigin, setLightboxOrigin] = useState<{
     dx: number;
     dy: number;
     scale: number;
-    rot: string;
-  }>({ dx: 0, dy: 24, scale: 0.72, rot: '0deg' });
-
-  const closeLightbox = useCallback(() => {
-    if (!lightboxEntry || lightboxClosing) return;
-    setLightboxClosing(true);
-    if (lightboxCloseTimerRef.current) {
-      window.clearTimeout(lightboxCloseTimerRef.current);
-    }
-    lightboxCloseTimerRef.current = window.setTimeout(() => {
-      setLightboxEntry(null);
-      setLightboxClosing(false);
-      lightboxCloseTimerRef.current = null;
-    }, 360);
-  }, [lightboxEntry, lightboxClosing]);
+  }>({ dx: 0, dy: 24, scale: 0.72 });
 
   const openLightboxFromElement = (
     entry: GuestbookPhotoEntry,
     el: HTMLElement | null
   ) => {
-    if (lightboxCloseTimerRef.current) {
-      window.clearTimeout(lightboxCloseTimerRef.current);
-      lightboxCloseTimerRef.current = null;
-    }
-    setLightboxClosing(false);
     if (el && typeof window !== 'undefined') {
       const rect = el.getBoundingClientRect();
       const targetW = Math.min(window.innerWidth - 40, 820);
       const dx = rect.left + rect.width / 2 - window.innerWidth / 2;
       const dy = rect.top + rect.height / 2 - window.innerHeight / 2;
       const scale = Math.max(0.18, Math.min(0.85, rect.width / targetW));
-      const rot =
-        window.getComputedStyle(el).getPropertyValue('--float-rot').trim() ||
-        '0deg';
-      setLightboxOrigin({ dx, dy, scale, rot });
+      setLightboxOrigin({ dx, dy, scale });
     } else {
-      setLightboxOrigin({ dx: 0, dy: 24, scale: 0.72, rot: '0deg' });
+      setLightboxOrigin({ dx: 0, dy: 24, scale: 0.72 });
     }
     setLightboxEntry(entry);
   };
@@ -458,11 +434,11 @@ export const PhotoGuestbookPage: React.FC = () => {
   useEffect(() => {
     if (!lightboxEntry) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'Escape') setLightboxEntry(null);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [lightboxEntry, closeLightbox]);
+  }, [lightboxEntry]);
 
   // Animate the monolith frame live when viewing any saved card in the lightbox
   useEffect(() => {
@@ -503,10 +479,7 @@ export const PhotoGuestbookPage: React.FC = () => {
           grayscale: false,
           elapsedSec,
           monoliths,
-          message: lightboxEntry.message,
-          showCaption: true,
-          orderNumber: lightboxEntry.orderNumber,
-          dateLabel: formatKoreaDate(lightboxEntry.createdAt),
+          showCaption: false,
           fastPreview: true,
         });
       };
@@ -655,9 +628,7 @@ export const PhotoGuestbookPage: React.FC = () => {
   };
 
   return (
-    <div
-      className={`photo-page ${lightboxEntry && !lightboxClosing ? 'is-lightbox-open' : ''}`}
-    >
+    <div className="photo-page">
       {/* Hidden video stream & full-resolution export canvas */}
       <video
         ref={videoRef}
@@ -735,17 +706,6 @@ export const PhotoGuestbookPage: React.FC = () => {
               className="photo-stage-col"
               aria-label="1컷 포토 프레임 미리보기"
             >
-              {/* Prepress Proof-Sheet Margin Metadata */}
-              <div className="photo-proof-bar" aria-hidden="true">
-                <span className="photo-proof-bar__item">
-                  PLATE {formatOrderNumber(nextOrderNumber)}
-                </span>
-                <span className="photo-proof-bar__mark">┼</span>
-                <span className="photo-proof-bar__item">
-                  4:3 / 3:2 · {activeFilter.toUpperCase()}
-                </span>
-              </div>
-
               <div className="photo-proof-wrap">
                 {/* 4-Corner Prepress Crop Marks (Tonbo / Trim Marks) */}
                 <span className="photo-crop photo-crop--tl" aria-hidden="true" />
@@ -826,8 +786,9 @@ export const PhotoGuestbookPage: React.FC = () => {
                           type="button"
                           role="radio"
                           aria-checked={activeFilter === filterId}
-                          className={`photo-filter-opt ${activeFilter === filterId ? 'is-active' : ''
-                            }`}
+                          className={`photo-filter-opt ${
+                            activeFilter === filterId ? 'is-active' : ''
+                          }`}
                           onClick={() => handleSelectFilter(filterId)}
                         >
                           <sup className="photo-filter-idx">
@@ -1032,11 +993,11 @@ export const PhotoGuestbookPage: React.FC = () => {
       {/* Lightbox Modal for Guestbook Entry */}
       {lightboxEntry && (
         <div
-          className={`photo-lightbox ${lightboxClosing ? 'is-closing' : ''}`}
+          className="photo-lightbox"
           role="dialog"
           aria-modal="true"
           aria-label="포토 방명록 상세"
-          onClick={closeLightbox}
+          onClick={() => setLightboxEntry(null)}
         >
           <div
             className="photo-lightbox__box"
@@ -1045,7 +1006,6 @@ export const PhotoGuestbookPage: React.FC = () => {
                 '--origin-dx': `${lightboxOrigin.dx}px`,
                 '--origin-dy': `${lightboxOrigin.dy}px`,
                 '--origin-scale': lightboxOrigin.scale,
-                '--origin-rot': lightboxOrigin.rot,
               } as React.CSSProperties
             }
             onClick={(e) => e.stopPropagation()}
@@ -1053,7 +1013,7 @@ export const PhotoGuestbookPage: React.FC = () => {
             <button
               type="button"
               className="photo-lightbox__close"
-              onClick={closeLightbox}
+              onClick={() => setLightboxEntry(null)}
               aria-label="닫기"
             >
               <X size={20} aria-hidden="true" />
