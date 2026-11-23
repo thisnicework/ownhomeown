@@ -26,8 +26,9 @@ import {
   type PhotoFilterId,
 } from '../lib/heterotopiaFilters';
 import {
-  deleteLocalGuestbookEntry,
+  deleteGuestbookEntry,
   downloadCanvasAsPng,
+  fetchGuestbookEntries,
   formatKoreaDate,
   getGuestbookIntegrationConfig,
   loadLocalGuestbookEntries,
@@ -226,6 +227,19 @@ export const PhotoGuestbookPage: React.FC = () => {
     };
   }, []);
 
+  // Load persisted photo guestbook entries from Vercel Blob on mount
+  useEffect(() => {
+    let cancelled = false;
+    void fetchGuestbookEntries().then((loaded) => {
+      if (!cancelled) {
+        setEntries(loaded);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleSelectFilter = (nextFilter: PhotoFilterId) => {
     setActiveFilter(nextFilter);
     activeFilterRef.current = nextFilter;
@@ -391,6 +405,7 @@ export const PhotoGuestbookPage: React.FC = () => {
         fullCanvas: exportCanvas,
         message,
         author: '',
+        filter: activeFilterRef.current,
         grayscale: false,
       });
       setEntries((prev) => [result.entry, ...prev]);
@@ -419,9 +434,9 @@ export const PhotoGuestbookPage: React.FC = () => {
     }
   };
 
-  const handleDeleteEntry = (id: string) => {
-    const next = deleteLocalGuestbookEntry(id);
-    setEntries(next);
+  const handleDeleteEntry = async (id: string) => {
+    await deleteGuestbookEntry(id);
+    setEntries((prev) => prev.filter((e) => e.id !== id));
     if (lightboxEntry?.id === id) {
       setLightboxEntry(null);
     }
@@ -871,7 +886,7 @@ export const PhotoGuestbookPage: React.FC = () => {
                   <button
                     type="button"
                     className="photo-btn photo-btn--ghost photo-btn--compact"
-                    onClick={() => handleDeleteEntry(lightboxEntry.id)}
+                    onClick={() => void handleDeleteEntry(lightboxEntry.id)}
                   >
                     <Trash2 size={14} aria-hidden="true" />
                     <span>삭제</span>

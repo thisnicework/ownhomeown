@@ -1,16 +1,18 @@
 export interface GuestbookPhotoEntry {
   id: string;
-  /** Framed 1080x1920 (or compressed archive JPEG) data URL */
+  /** Public Vercel Blob URL or local compressed data URL */
   imageDataUrl: string;
   /** Visitor guestbook message */
   message: string;
-  /** Visitor display name / nickname */
+  /** Visitor display name / nickname (optional) */
   author: string;
+  /** Active camera filter name */
+  filter?: string;
   /** Whether monochrome filter was used */
   grayscale: boolean;
   /** ISO timestamp */
   createdAt: string;
-  /** Sync status with external guestbook site/API */
+  /** Sync status with Vercel Blob / external guestbook API */
   syncStatus: 'synced' | 'local';
 }
 
@@ -21,22 +23,23 @@ export interface GuestbookSubmitResult {
 }
 
 const STORAGE_KEY = 'ownhomeown:photo-guestbook:v1';
+const DEFAULT_VERCEL_API = '/api/photo-guestbook';
 const MAX_LOCAL_ENTRIES = 18;
 
 /** Reads optional ?returnUrl=... or ?api=... query parameters safely */
 export function getGuestbookIntegrationConfig(): {
-  apiUrl: string | null;
+  apiUrl: string;
   returnUrl: string | null;
   isEmbedded: boolean;
 } {
   if (typeof window === 'undefined') {
-    return { apiUrl: null, returnUrl: null, isEmbedded: false };
+    return { apiUrl: DEFAULT_VERCEL_API, returnUrl: null, isEmbedded: false };
   }
 
   const params = new URLSearchParams(window.location.search);
   const envApi = (import.meta.env.VITE_GUESTBOOK_API_URL as string | undefined)?.trim();
   const queryApi = params.get('api')?.trim();
-  const rawApi = queryApi || envApi || '';
+  const rawApi = queryApi || envApi || DEFAULT_VERCEL_API;
 
   const envReturn = (import.meta.env.VITE_GUESTBOOK_RETURN_URL as string | undefined)?.trim();
   const queryReturn = params.get('returnUrl')?.trim();
@@ -63,7 +66,7 @@ export function getGuestbookIntegrationConfig(): {
   }
 
   return {
-    apiUrl: safeHttpUrl(rawApi),
+    apiUrl: safeHttpUrl(rawApi) || DEFAULT_VERCEL_API,
     returnUrl: safeHttpUrl(rawReturn),
     isEmbedded,
   };
@@ -96,13 +99,70 @@ function saveLocalGuestbookEntries(entries: GuestbookPhotoEntry[]): void {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
       return;
     } catch {
-      // Trim oldest entry if localStorage quota is tight
       list = list.slice(0, list.length - 1);
     }
   }
 }
 
-export function deleteLocalGuestbookEntry(id: string): GuestbookPhotoEntry[] {
+/** Fetches persisted entries from Vercel Blob (/api/photo-guestbook) and merges with local fallback */
+export async function fetchGuestbookEntries(): Promise<GuestbookPhotoEntry[]> {
+  const local = loadLocalGuestbookEntries();
+  const config = getGuestbookIntegrationConfig();
+
+  try {
+    const res = await fetch(config.apiUrl, { cache: 'no-store' });
+    if (!res.ok) return local;
+    const data = (await res.json()) as {
+      entries?: Array<{
+        id: string;
+        imageUrl?: string;
+        imageDataUrl?: string;
+        message?: string;
+        author?: string;
+        filter?: string;
+        createdAt: string;
+      }>;
+    };
+
+    if (!Array.isArray(data.entries)) return local;
+
+    const remote: GuestbookPhotoEntry[] = data.entries
+      .filter((e) => e && e.id && (e.imageUrl || e.imageDataUrl) && e.createdAt)
+      .map((e) => ({
+        id: e.id,
+        imageDataUrl: e.imageUrl || e.imageDataUrl || '',
+        message: e.message || '',
+        author: e.author || '',
+        filter: e.filter || 'kinetic',
+        grayscale: false,
+        createdAt: e.createdAt,
+        syncStatus: 'synced' as const,
+      }));
+
+    // Merge remote entries with any unsynced local-only entries
+    const remoteIds = new Set(remote.map((r) => r.id));
+    const localOnly = local.filter(
+      (item) => item.syncStatus === 'local' && !remoteIds.has(item.id)
+    );
+    return [...remote, ...localOnly].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  } catch {
+    return local;
+  }
+}
+
+export async function deleteGuestbookEntry(
+  id: string
+): Promise<GuestbookPhotoEntry[]> {
+  const config = getGuestbookIntegrationConfig();
+  try {
+    const url = new URL(config.apiUrl, window.location.origin);
+    url.searchParams.set('id', id);
+    await fetch(url.toString(), { method: 'DELETE' });
+  } catch {
+    // Ignore remote delete error and still remove locally
+  }
   const next = loadLocalGuestbookEntries().filter((e) => e.id !== id);
   saveLocalGuestbookEntries(next);
   return next;
@@ -130,50 +190,57 @@ export function createArchiveThumbnailDataUrl(
 
 /**
  * Submits a framed 1-cut photo + guestbook message:
- * 1. Sends to external guestbook API if configured (`VITE_GUESTBOOK_API_URL` or `?api=...`)
- * 2. Broadcasts `OWNHOMEOWN_PHOTO_GUESTBOOK_SUBMIT` via `postMessage` to parent/opener guestbook window
- * 3. Persists a compressed card locally so it immediately appears in the /photo guestbook archive
+ * 1. Uploads to Vercel Blob via POST /api/photo-guestbook (or custom ?api=... endpoint)
+ * 2. Broadcasts OWNHOMEOWN_PHOTO_GUESTBOOK_SUBMIT via postMessage to parent/opener guestbook window
+ * 3. Falls back to localStorage if Vercel Blob is not configured (e.g. local dev)
  */
 export async function submitPhotoToGuestbook(params: {
   fullCanvas: HTMLCanvasElement;
   message: string;
   author: string;
+  filter?: string;
   grayscale: boolean;
 }): Promise<GuestbookSubmitResult> {
-  const { fullCanvas, message, author, grayscale } = params;
+  const { fullCanvas, message, author, filter = 'kinetic', grayscale } = params;
   const createdAt = new Date().toISOString();
   const id = `oho-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
-  const fullJpegDataUrl = fullCanvas.toDataURL('image/jpeg', 0.92);
+  const fullJpegDataUrl = fullCanvas.toDataURL('image/jpeg', 0.9);
   const archiveThumbDataUrl = createArchiveThumbnailDataUrl(fullCanvas, 800, 0.84);
   const config = getGuestbookIntegrationConfig();
 
   let remoteSynced = false;
   let remoteError: string | undefined;
+  let finalImageUrl = archiveThumbDataUrl;
 
-  if (config.apiUrl) {
-    try {
-      const res = await fetch(config.apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          imageDataUrl: fullJpegDataUrl,
-          message: message.trim(),
-          author: author.trim() || '익명',
-          grayscale,
-          createdAt,
-          source: 'ownhomeown.com/photo',
-        }),
-      });
-      if (res.ok) {
-        remoteSynced = true;
-      } else {
-        remoteError = `HTTP ${res.status}`;
+  try {
+    const res = await fetch(config.apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        imageDataUrl: fullJpegDataUrl,
+        message: message.trim(),
+        author: author.trim(),
+        filter,
+        grayscale,
+        createdAt,
+        source: 'ownhomeown.com/photo',
+      }),
+    });
+    if (res.ok) {
+      remoteSynced = true;
+      const payload = (await res.json().catch(() => null)) as {
+        entry?: { imageUrl?: string };
+      } | null;
+      if (payload?.entry?.imageUrl) {
+        finalImageUrl = payload.entry.imageUrl;
       }
-    } catch (err) {
-      remoteError = err instanceof Error ? err.message : 'Network error';
+    } else {
+      remoteError = `HTTP ${res.status}`;
     }
+  } catch (err) {
+    remoteError = err instanceof Error ? err.message : 'Network error';
   }
 
   // Notify parent iframe or opener guestbook site if connected
@@ -181,9 +248,11 @@ export async function submitPhotoToGuestbook(params: {
     type: 'OWNHOMEOWN_PHOTO_GUESTBOOK_SUBMIT',
     payload: {
       id,
+      imageUrl: finalImageUrl,
       imageDataUrl: fullJpegDataUrl,
       message: message.trim(),
-      author: author.trim() || '익명',
+      author: author.trim(),
+      filter,
       grayscale,
       createdAt,
       source: 'ownhomeown.com/photo',
@@ -193,11 +262,9 @@ export async function submitPhotoToGuestbook(params: {
   try {
     if (window.parent && window.parent !== window) {
       window.parent.postMessage(postPayload, '*');
-      remoteSynced = true;
     }
     if (window.opener && !window.opener.closed) {
       window.opener.postMessage(postPayload, '*');
-      remoteSynced = true;
     }
   } catch {
     // Ignore cross-origin postMessage restrictions
@@ -205,16 +272,20 @@ export async function submitPhotoToGuestbook(params: {
 
   const entry: GuestbookPhotoEntry = {
     id,
-    imageDataUrl: archiveThumbDataUrl,
+    imageDataUrl: finalImageUrl,
     message: message.trim(),
-    author: author.trim() || '익명',
+    author: author.trim(),
+    filter,
     grayscale,
     createdAt,
     syncStatus: remoteSynced ? 'synced' : 'local',
   };
 
-  const existing = loadLocalGuestbookEntries();
-  saveLocalGuestbookEntries([entry, ...existing]);
+  // Cache unsynced entries locally so local dev still persists across reloads
+  if (!remoteSynced) {
+    const existing = loadLocalGuestbookEntries();
+    saveLocalGuestbookEntries([entry, ...existing]);
+  }
 
   return { entry, remoteSynced, remoteError };
 }
