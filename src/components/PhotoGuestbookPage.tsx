@@ -721,11 +721,6 @@ export const PhotoGuestbookPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Shutter flash */}
-                {flashActive && (
-                  <div className="photo-flash" aria-hidden="true" />
-                )}
-
                 {/* Camera error notice */}
                 {stage === 'capture' && cameraStatus === 'error' && (
                   <div className="photo-camera-fallback">

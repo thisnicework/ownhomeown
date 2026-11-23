@@ -443,11 +443,11 @@
   animation: photoFlashFade 0.28s ease-out forwards;
 }
 
-/* Full-screen physical illumination flash (turns entire monitor bright white before/during capture) */
+/* Background-only physical illumination flash (lights up the entire dark background behind the center booth card so the viewer's camera preview stays unobstructed) */
 .photo-screen-light {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 6;
   background: #ffffff;
   pointer-events: none;
   opacity: 0.98;
