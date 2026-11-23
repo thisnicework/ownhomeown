@@ -5,7 +5,13 @@
 
 .photo-page {
   min-height: 100svh;
-  background: var(--pdf-black);
+  background-color: var(--pdf-black);
+  /* Subtle lithographic registration dot-grid (static CSS, zero GPU cost) */
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.075) 1px,
+    transparent 1px
+  );
+  background-size: 26px 26px;
   color: var(--ink-on-dark);
   display: flex;
   flex-direction: column;
@@ -269,11 +275,121 @@
   }
 }
 
-/* 4:3 Landscape Stage Frame */
+/* 4:3 Landscape Proof-Sheet Stage with Prepress Crop Marks */
 .photo-stage-col {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   width: 100%;
+  gap: 0.55rem;
+}
+
+.photo-proof-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.48);
+  user-select: none;
+}
+
+.photo-proof-bar__mark {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.34);
+}
+
+.photo-proof-wrap {
+  position: relative;
+  width: 100%;
+  padding: 12px;
+}
+
+/* Swiss / Japanese Tonbo Prepress Trim Marks */
+.photo-crop {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.photo-crop::before,
+.photo-crop::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.photo-crop--tl {
+  top: 0;
+  left: 0;
+}
+.photo-crop--tl::before {
+  top: 11px;
+  left: 0;
+  width: 8px;
+  height: 1px;
+}
+.photo-crop--tl::after {
+  top: 0;
+  left: 11px;
+  width: 1px;
+  height: 8px;
+}
+
+.photo-crop--tr {
+  top: 0;
+  right: 0;
+}
+.photo-crop--tr::before {
+  top: 11px;
+  right: 0;
+  width: 8px;
+  height: 1px;
+}
+.photo-crop--tr::after {
+  top: 0;
+  right: 11px;
+  width: 1px;
+  height: 8px;
+}
+
+.photo-crop--bl {
+  bottom: 0;
+  left: 0;
+}
+.photo-crop--bl::before {
+  bottom: 11px;
+  left: 0;
+  width: 8px;
+  height: 1px;
+}
+.photo-crop--bl::after {
+  bottom: 0;
+  left: 11px;
+  width: 1px;
+  height: 8px;
+}
+
+.photo-crop--br {
+  bottom: 0;
+  right: 0;
+}
+.photo-crop--br::before {
+  bottom: 11px;
+  right: 0;
+  width: 8px;
+  height: 1px;
+}
+.photo-crop--br::after {
+  bottom: 0;
+  right: 11px;
+  width: 1px;
+  height: 8px;
 }
 
 .photo-frame-shell {
@@ -281,9 +397,9 @@
   width: 100%;
   aspect-ratio: 4 / 3;
   background: var(--pdf-grey);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   overflow: hidden;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 26px 64px rgba(0, 0, 0, 0.72);
 }
 
 .photo-frame-canvas {
@@ -377,8 +493,9 @@
 }
 
 .photo-panel {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-top: 2px solid #ffffff;
+  background: rgba(8, 8, 8, 0.96);
   padding: clamp(1.25rem, 3vw, 2rem);
   display: flex;
   flex-direction: column;
@@ -442,24 +559,37 @@
 .photo-filter-opt {
   background: none;
   border: none;
-  padding: 0.15rem 0.2rem;
+  padding: 0.2rem 0.28rem;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.84rem;
-  letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.44);
   cursor: pointer;
-  transition: color 0.16s ease;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.24rem;
+  transition: color 0.16s ease, background-color 0.16s ease;
+}
+
+.photo-filter-idx {
+  font-size: 0.58rem;
+  opacity: 0.6;
+  letter-spacing: 0.02em;
 }
 
 .photo-filter-opt:hover {
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .photo-filter-opt.is-active {
-  color: #ffffff;
-  text-decoration: underline;
-  text-underline-offset: 4px;
+  background: #ffffff;
+  color: #000000;
+  padding: 0.18rem 0.48rem;
   font-weight: 500;
+}
+
+.photo-filter-opt.is-active .photo-filter-idx {
+  opacity: 0.72;
 }
 
 .photo-filter-sep {
@@ -499,17 +629,49 @@
 }
 
 .photo-shutter-btn {
-  width: 74px;
-  height: 74px;
-  padding: 5px;
+  position: relative;
+  width: 72px;
+  height: 72px;
+  padding: 6px;
   border-radius: 50%;
-  border: 2px solid #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.78);
   background: transparent;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.14s ease, opacity 0.14s ease;
+  transition: transform 0.14s ease, border-color 0.16s ease, opacity 0.14s ease;
+}
+
+/* Precision Swiss optical registration ticks at 12/6 and 3/9 o'clock */
+.photo-shutter-btn::before,
+.photo-shutter-btn::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+.photo-shutter-btn::before {
+  width: 1px;
+  height: 88px;
+  background: linear-gradient(
+    to bottom,
+    #ffffff 0 6px,
+    transparent 6px 82px,
+    #ffffff 82px 88px
+  );
+}
+
+.photo-shutter-btn::after {
+  height: 1px;
+  width: 88px;
+  background: linear-gradient(
+    to right,
+    #ffffff 0 6px,
+    transparent 6px 82px,
+    #ffffff 82px 88px
+  );
 }
 
 .photo-shutter-btn:hover:not(:disabled) {
@@ -616,10 +778,22 @@
 }
 
 .photo-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.6rem;
   font-size: 0.8rem;
   font-weight: 500;
   color: #e6e6e6;
   letter-spacing: 0.01em;
+}
+
+.photo-label__idx {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.55);
+  border-right: 1px solid rgba(255, 255, 255, 0.22);
+  padding-right: 0.6rem;
 }
 
 .photo-counter {
