@@ -21,6 +21,11 @@ import {
   type FrameMonolithSet,
 } from '../lib/photoFrameRenderer';
 import {
+  HeterotopiaFilterEngine,
+  PHOTO_FILTERS,
+  type PhotoFilterId,
+} from '../lib/heterotopiaFilters';
+import {
   deleteLocalGuestbookEntry,
   downloadCanvasAsPng,
   formatKoreaDate,
@@ -88,6 +93,9 @@ export const PhotoGuestbookPage: React.FC = () => {
   const [cameraRetryKey, setCameraRetryKey] = useState<number>(0);
 
   // Booth & frame state
+  const [activeFilter, setActiveFilter] = useState<PhotoFilterId>('kinetic');
+  const activeFilterRef = useRef<PhotoFilterId>('kinetic');
+  const filterEngineRef = useRef<HeterotopiaFilterEngine | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [flashActive, setFlashActive] = useState<boolean>(false);
   const [monoliths] = useState<FrameMonolithSet>(() =>
@@ -207,6 +215,23 @@ export const PhotoGuestbookPage: React.FC = () => {
     }
   }, [activeTab, stage]);
 
+  // Initialize heterotopia 6-filter engine & MediaPipe FaceMesh once on mount
+  useEffect(() => {
+    const engine = new HeterotopiaFilterEngine(900, 600);
+    filterEngineRef.current = engine;
+    void engine.initFaceTracker();
+    return () => {
+      engine.dispose();
+      filterEngineRef.current = null;
+    };
+  }, []);
+
+  const handleSelectFilter = (nextFilter: PhotoFilterId) => {
+    setActiveFilter(nextFilter);
+    activeFilterRef.current = nextFilter;
+    filterEngineRef.current?.onFilterChange(nextFilter);
+  };
+
   // Real-time 4:3 preview loop for capture stage
   useEffect(() => {
     if (activeTab !== 'booth' || stage !== 'capture') return;
@@ -225,17 +250,23 @@ export const PhotoGuestbookPage: React.FC = () => {
       latestElapsedRef.current = elapsedSec;
 
       const video = videoRef.current;
+      const engine = filterEngineRef.current;
       const hasVideo =
         video &&
+        engine &&
         cameraStatus === 'ready' &&
         video.readyState >= 2 &&
         video.videoWidth > 0;
 
+      if (hasVideo) {
+        engine.renderFrame(video, activeFilterRef.current);
+      }
+
       renderExhibitionPhotoFrame(ctx, {
-        source: hasVideo ? video : null,
-        sourceWidth: hasVideo ? video.videoWidth : 0,
-        sourceHeight: hasVideo ? video.videoHeight : 0,
-        mirror: true,
+        source: hasVideo ? engine.canvas : null,
+        sourceWidth: hasVideo ? engine.canvas.width : 0,
+        sourceHeight: hasVideo ? engine.canvas.height : 0,
+        mirror: false,
         grayscale: false,
         elapsedSec,
         monoliths,
@@ -259,7 +290,7 @@ export const PhotoGuestbookPage: React.FC = () => {
         source: captured.image,
         sourceWidth: captured.width,
         sourceHeight: captured.height,
-        mirror: true,
+        mirror: false,
         grayscale: false,
         elapsedSec: captured.frozenElapsedSec,
         monoliths,
@@ -279,16 +310,15 @@ export const PhotoGuestbookPage: React.FC = () => {
   };
 
   const captureFromVideo = useCallback(() => {
+    const engine = filterEngineRef.current;
     const video = videoRef.current;
-    if (!video || video.videoWidth === 0 || video.videoHeight === 0) return;
+    if (!engine || !video || video.videoWidth === 0 || video.videoHeight === 0) {
+      return;
+    }
 
+    // Ensure latest filtered frame is painted before snapshotting
+    engine.renderFrame(video, activeFilterRef.current);
     triggerShutterFlash();
-    const snap = document.createElement('canvas');
-    snap.width = video.videoWidth;
-    snap.height = video.videoHeight;
-    const sctx = snap.getContext('2d');
-    if (!sctx) return;
-    sctx.drawImage(video, 0, 0, snap.width, snap.height);
 
     const img = new Image();
     img.onload = () => {
@@ -300,7 +330,7 @@ export const PhotoGuestbookPage: React.FC = () => {
       });
       setStage('compose');
     };
-    img.src = snap.toDataURL('image/png');
+    img.src = engine.canvas.toDataURL('image/png');
   }, []);
 
   // Fixed 3-second countdown shutter
@@ -345,7 +375,7 @@ export const PhotoGuestbookPage: React.FC = () => {
         source: captured.image,
         sourceWidth: captured.width,
         sourceHeight: captured.height,
-        mirror: true,
+        mirror: false,
         grayscale: false,
         elapsedSec: captured.frozenElapsedSec,
         monoliths,
@@ -579,6 +609,33 @@ export const PhotoGuestbookPage: React.FC = () => {
                       )}
                     </span>
                   </button>
+
+                  <div
+                    className="photo-filter-bar"
+                    role="radiogroup"
+                    aria-label="카메라 필터 선택"
+                  >
+                    {PHOTO_FILTERS.map((filterId, idx) => (
+                      <React.Fragment key={filterId}>
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={activeFilter === filterId}
+                          className={`photo-filter-opt ${
+                            activeFilter === filterId ? 'is-active' : ''
+                          }`}
+                          onClick={() => handleSelectFilter(filterId)}
+                        >
+                          {filterId}
+                        </button>
+                        {idx < PHOTO_FILTERS.length - 1 && (
+                          <span className="photo-filter-sep" aria-hidden="true">
+                            /
+                          </span>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
                 </div>
               )}
 
