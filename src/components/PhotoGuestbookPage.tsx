@@ -700,59 +700,51 @@ export const PhotoGuestbookPage: React.FC = () => {
             </aside>
           )}
 
-          {/* Centered Single-Column Booth: Swiss Proof-Sheet 4:3 Card + Precision Shutter Below */}
+          {/* Centered Single-Column Booth: 4:3 Card + Shutter Below */}
           <div className="photo-center-stack">
             <section
               className="photo-stage-col"
               aria-label="1컷 포토 프레임 미리보기"
             >
-              <div className="photo-proof-wrap">
-                {/* 4-Corner Prepress Crop Marks (Tonbo / Trim Marks) */}
-                <span className="photo-crop photo-crop--tl" aria-hidden="true" />
-                <span className="photo-crop photo-crop--tr" aria-hidden="true" />
-                <span className="photo-crop photo-crop--bl" aria-hidden="true" />
-                <span className="photo-crop photo-crop--br" aria-hidden="true" />
+              <div className="photo-frame-shell">
+                <canvas
+                  ref={previewCanvasRef}
+                  width={FRAME_W / 2}
+                  height={FRAME_H / 2}
+                  className="photo-frame-canvas"
+                />
 
-                <div className="photo-frame-shell">
-                  <canvas
-                    ref={previewCanvasRef}
-                    width={FRAME_W / 2}
-                    height={FRAME_H / 2}
-                    className="photo-frame-canvas"
-                  />
+                {/* Fixed 3-second countdown overlay */}
+                {countdown !== null && countdown > 0 && (
+                  <div className="photo-countdown" aria-live="assertive">
+                    <span>{countdown}</span>
+                  </div>
+                )}
 
-                  {/* Fixed 3-second countdown overlay */}
-                  {countdown !== null && countdown > 0 && (
-                    <div className="photo-countdown" aria-live="assertive">
-                      <span>{countdown}</span>
-                    </div>
-                  )}
+                {/* Shutter flash */}
+                {flashActive && (
+                  <div className="photo-flash" aria-hidden="true" />
+                )}
 
-                  {/* Shutter flash */}
-                  {flashActive && (
-                    <div className="photo-flash" aria-hidden="true" />
-                  )}
-
-                  {/* Camera error notice */}
-                  {stage === 'capture' && cameraStatus === 'error' && (
-                    <div className="photo-camera-fallback">
-                      <p className="photo-camera-fallback__title">
-                        CAMERA UNAVAILABLE
-                      </p>
-                      <p className="photo-camera-fallback__desc">
-                        {cameraError}
-                      </p>
-                      <button
-                        type="button"
-                        className="photo-btn photo-btn--ghost photo-btn--compact"
-                        onClick={() => setCameraRetryKey((k) => k + 1)}
-                      >
-                        <RefreshCw size={14} aria-hidden="true" />
-                        <span>다시 연결</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
+                {/* Camera error notice */}
+                {stage === 'capture' && cameraStatus === 'error' && (
+                  <div className="photo-camera-fallback">
+                    <p className="photo-camera-fallback__title">
+                      CAMERA UNAVAILABLE
+                    </p>
+                    <p className="photo-camera-fallback__desc">
+                      {cameraError}
+                    </p>
+                    <button
+                      type="button"
+                      className="photo-btn photo-btn--ghost photo-btn--compact"
+                      onClick={() => setCameraRetryKey((k) => k + 1)}
+                    >
+                      <RefreshCw size={14} aria-hidden="true" />
+                      <span>다시 연결</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -791,10 +783,7 @@ export const PhotoGuestbookPage: React.FC = () => {
                           }`}
                           onClick={() => handleSelectFilter(filterId)}
                         >
-                          <sup className="photo-filter-idx">
-                            {String(idx + 1).padStart(2, '0')}
-                          </sup>
-                          <span>{filterId}</span>
+                          {filterId}
                         </button>
                         {idx < PHOTO_FILTERS.length - 1 && (
                           <span className="photo-filter-sep" aria-hidden="true">
@@ -815,13 +804,10 @@ export const PhotoGuestbookPage: React.FC = () => {
                   <div className="photo-field">
                     <div className="photo-field__label-row">
                       <label htmlFor="guestbook-message" className="photo-label">
-                        <span className="photo-label__idx">
-                          EDITION {formatOrderNumber(nextOrderNumber)}
-                        </span>
-                        <span>방명록 한마디</span>
+                        방명록 한마디
                       </label>
                       <span className="photo-counter">
-                        {String(message.length).padStart(3, '0')} / 120
+                        {message.length} / 120
                       </span>
                     </div>
                     <textarea

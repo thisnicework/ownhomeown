@@ -6,10 +6,6 @@
 .photo-page {
   min-height: 100svh;
   background-color: var(--pdf-black);
-  /* Subtle lithographic registration dot-grid (static CSS, zero GPU cost) */
-  background-image: radial-gradient(rgba(255, 255, 255, 0.075) 1px,
-      transparent 1px);
-  background-size: 26px 26px;
   color: var(--ink-on-dark);
   display: flex;
   flex-direction: column;
@@ -103,20 +99,6 @@
 }
 
 /* Main Booth Layout — Centered Single Column (Card on Top, Controls Directly Below) */
-.photo-booth,
-.photo-gallery-view {
-  transition:
-    filter 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.photo-page.is-lightbox-open .photo-booth,
-.photo-page.is-lightbox-open .photo-gallery-view {
-  filter: blur(12px) brightness(0.74);
-  transform: scale(0.985);
-}
-
 .photo-booth {
   position: relative;
   flex: 1;
@@ -258,13 +240,13 @@
   0% {
     transform: translate3d(0, 0, 0) rotate(var(--float-rot, 0deg)) scale(var(--float-scale, 1));
   }
-
   50% {
-    transform: translate3d(calc(var(--float-dx, 8px) * 0.6), var(--float-dy, -10px), 0) rotate(calc(var(--float-rot, 0deg) + 1.4deg)) scale(var(--float-scale, 1));
+    transform: translate3d(calc(var(--float-dx, 8px) * 0.6), var(--float-dy, -10px), 0)
+      rotate(calc(var(--float-rot, 0deg) + 1.4deg)) scale(var(--float-scale, 1));
   }
-
   100% {
-    transform: translate3d(var(--float-dx, 8px), calc(var(--float-dy, -10px) * -0.5), 0) rotate(calc(var(--float-rot, 0deg) - 1.2deg)) scale(var(--float-scale, 1));
+    transform: translate3d(var(--float-dx, 8px), calc(var(--float-dy, -10px) * -0.5), 0)
+      rotate(calc(var(--float-rot, 0deg) - 1.2deg)) scale(var(--float-scale, 1));
   }
 }
 
@@ -273,7 +255,6 @@
     opacity: 0;
     transform: translate3d(0, 26px, 0) rotate(0deg) scale(0.74);
   }
-
   100% {
     opacity: 0.96;
     transform: translate3d(0, 0, 0) rotate(var(--float-rot, 0deg)) scale(var(--float-scale, 1));
@@ -281,7 +262,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .photo-float-card,
   .photo-float-card.is-newest {
     animation: none;
@@ -289,129 +269,12 @@
   }
 }
 
-/* 4:3 Landscape Proof-Sheet Stage with Prepress Crop Marks */
+/* 4:3 Landscape Stage */
 .photo-stage-col {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
-  gap: 0.55rem;
-}
-
-.photo-proof-bar {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 2px;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.66rem;
-  letter-spacing: 0.16em;
-  color: rgba(255, 255, 255, 0.48);
-  user-select: none;
-}
-
-.photo-proof-bar__mark {
-  font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.34);
-}
-
-.photo-proof-wrap {
-  position: relative;
-  width: 100%;
-  padding: 12px;
-}
-
-/* Swiss / Japanese Tonbo Prepress Trim Marks */
-.photo-crop {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  pointer-events: none;
-  z-index: 3;
-}
-
-.photo-crop::before,
-.photo-crop::after {
-  content: '';
-  position: absolute;
-  background: rgba(255, 255, 255, 0.48);
-}
-
-.photo-crop--tl {
-  top: 0;
-  left: 0;
-}
-
-.photo-crop--tl::before {
-  top: 11px;
-  left: 0;
-  width: 8px;
-  height: 1px;
-}
-
-.photo-crop--tl::after {
-  top: 0;
-  left: 11px;
-  width: 1px;
-  height: 8px;
-}
-
-.photo-crop--tr {
-  top: 0;
-  right: 0;
-}
-
-.photo-crop--tr::before {
-  top: 11px;
-  right: 0;
-  width: 8px;
-  height: 1px;
-}
-
-.photo-crop--tr::after {
-  top: 0;
-  right: 11px;
-  width: 1px;
-  height: 8px;
-}
-
-.photo-crop--bl {
-  bottom: 0;
-  left: 0;
-}
-
-.photo-crop--bl::before {
-  bottom: 11px;
-  left: 0;
-  width: 8px;
-  height: 1px;
-}
-
-.photo-crop--bl::after {
-  bottom: 0;
-  left: 11px;
-  width: 1px;
-  height: 8px;
-}
-
-.photo-crop--br {
-  bottom: 0;
-  right: 0;
-}
-
-.photo-crop--br::before {
-  bottom: 11px;
-  right: 0;
-  width: 8px;
-  height: 1px;
-}
-
-.photo-crop--br::after {
-  bottom: 0;
-  right: 11px;
-  width: 1px;
-  height: 8px;
 }
 
 .photo-frame-shell {
@@ -421,7 +284,7 @@
   background: var(--pdf-grey);
   border: 1px solid rgba(255, 255, 255, 0.22);
   overflow: hidden;
-  box-shadow: 0 26px 64px rgba(0, 0, 0, 0.72);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
 }
 
 .photo-frame-canvas {
@@ -497,7 +360,6 @@
   from {
     opacity: 0.92;
   }
-
   to {
     opacity: 0;
   }
@@ -552,9 +414,8 @@
 }
 
 .photo-panel {
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-top: 2px solid #ffffff;
-  background: rgba(8, 8, 8, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(11, 11, 11, 0.94);
   padding: clamp(1.25rem, 3vw, 2rem);
   display: flex;
   flex-direction: column;
@@ -618,43 +479,30 @@
 .photo-filter-opt {
   background: none;
   border: none;
-  padding: 0.2rem 0.28rem;
+  padding: 0.2rem 0.25rem;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.82rem;
-  letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.44);
+  font-size: 0.84rem;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.42);
   cursor: pointer;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.24rem;
-  transition: color 0.16s ease, background-color 0.16s ease;
-}
-
-.photo-filter-idx {
-  font-size: 0.58rem;
-  opacity: 0.6;
-  letter-spacing: 0.02em;
+  transition: color 0.16s ease, opacity 0.16s ease;
 }
 
 .photo-filter-opt:hover {
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .photo-filter-opt.is-active {
-  background: #ffffff;
-  color: #000000;
-  padding: 0.18rem 0.48rem;
+  color: #ffffff;
   font-weight: 500;
-}
-
-.photo-filter-opt.is-active .photo-filter-idx {
-  opacity: 0.72;
+  text-decoration: underline;
+  text-underline-offset: 5px;
 }
 
 .photo-filter-sep {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.24);
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.28);
 }
 
 /* Shutter Dock */
@@ -688,45 +536,17 @@
 }
 
 .photo-shutter-btn {
-  position: relative;
   width: 72px;
   height: 72px;
   padding: 6px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.78);
+  border: 2px solid #ffffff;
   background: transparent;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.14s ease, border-color 0.16s ease, opacity 0.14s ease;
-}
-
-/* Precision Swiss optical registration ticks at 12/6 and 3/9 o'clock */
-.photo-shutter-btn::before,
-.photo-shutter-btn::after {
-  content: '';
-  position: absolute;
-  pointer-events: none;
-  opacity: 0.45;
-}
-
-.photo-shutter-btn::before {
-  width: 1px;
-  height: 88px;
-  background: linear-gradient(to bottom,
-      #ffffff 0 6px,
-      transparent 6px 82px,
-      #ffffff 82px 88px);
-}
-
-.photo-shutter-btn::after {
-  height: 1px;
-  width: 88px;
-  background: linear-gradient(to right,
-      #ffffff 0 6px,
-      transparent 6px 82px,
-      #ffffff 82px 88px);
+  transition: transform 0.14s ease, opacity 0.14s ease;
 }
 
 .photo-shutter-btn:hover:not(:disabled) {
@@ -786,7 +606,6 @@
     opacity: 0;
     transform: translate3d(0, 10px, 0);
   }
-
   to {
     opacity: 1;
     transform: translate3d(0, 0, 0);
@@ -1099,18 +918,14 @@
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.32);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1.25rem;
-  animation: photoLightboxFadeIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-.photo-lightbox.is-closing {
-  animation: photoLightboxFadeOut 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: photoLightboxFadeIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .photo-lightbox__box {
@@ -1119,63 +934,40 @@
   max-height: 92svh;
   overflow-y: auto;
   background: rgba(11, 11, 11, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.34);
-  box-shadow: 0 36px 96px rgba(0, 0, 0, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.72);
   display: flex;
   flex-direction: column;
   will-change: transform, opacity;
-  animation: photoLightboxZoomIn 0.68s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.photo-lightbox.is-closing .photo-lightbox__box {
-  animation: photoLightboxZoomOut 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: photoLightboxZoomIn 0.54s cubic-bezier(0.19, 1, 0.22, 1) forwards;
 }
 
 @keyframes photoLightboxFadeIn {
   from {
     opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
   }
-
   to {
     opacity: 1;
-  }
-}
-
-@keyframes photoLightboxFadeOut {
-  from {
-    opacity: 1;
-  }
-
-  to {
-    opacity: 0;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
   }
 }
 
 @keyframes photoLightboxZoomIn {
-  0% {
-    opacity: 0.25;
-    transform: translate3d(var(--origin-dx, 0px),
+  from {
+    opacity: 0.35;
+    transform: translate3d(
+        var(--origin-dx, 0px),
         var(--origin-dy, 24px),
-        0) rotate(var(--origin-rot, 0deg)) scale(var(--origin-scale, 0.35));
+        0
+      )
+      scale(var(--origin-scale, 0.72));
   }
-
-  100% {
+  to {
     opacity: 1;
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
-  }
-}
-
-@keyframes photoLightboxZoomOut {
-  0% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translate3d(var(--origin-dx, 0px),
-        var(--origin-dy, 24px),
-        0) rotate(var(--origin-rot, 0deg)) scale(var(--origin-scale, 0.35));
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
