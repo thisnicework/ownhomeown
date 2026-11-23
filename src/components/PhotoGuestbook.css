@@ -103,6 +103,20 @@
 }
 
 /* Main Booth Layout — Centered Single Column (Card on Top, Controls Directly Below) */
+.photo-booth,
+.photo-gallery-view {
+  transition:
+    filter 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.photo-page.is-lightbox-open .photo-booth,
+.photo-page.is-lightbox-open .photo-gallery-view {
+  filter: blur(12px) brightness(0.74);
+  transform: scale(0.985);
+}
+
 .photo-booth {
   position: relative;
   flex: 1;
@@ -440,7 +454,43 @@
   background: #ffffff;
   z-index: 8;
   pointer-events: none;
-  animation: photoFlashFade 0.22s ease-out forwards;
+  animation: photoFlashFade 0.28s ease-out forwards;
+}
+
+/* Full-screen physical illumination flash (turns entire monitor bright white before/during capture) */
+.photo-screen-light {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #ffffff;
+  pointer-events: none;
+  opacity: 0.98;
+  box-shadow: inset 0 0 120px #ffffff;
+  animation: photoScreenLightOn 0.08s ease-out forwards;
+}
+
+.photo-screen-light.is-decaying {
+  animation: photoScreenLightDecay 0.34s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes photoScreenLightOn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 0.98;
+  }
+}
+
+@keyframes photoScreenLightDecay {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
 }
 
 @keyframes photoFlashFade {
@@ -1049,14 +1099,18 @@
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.42);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1.25rem;
-  animation: photoLightboxFadeIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: photoLightboxFadeIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.photo-lightbox.is-closing {
+  animation: photoLightboxFadeOut 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .photo-lightbox__box {
@@ -1065,39 +1119,63 @@
   max-height: 92svh;
   overflow-y: auto;
   background: rgba(11, 11, 11, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  box-shadow: 0 36px 96px rgba(0, 0, 0, 0.78);
   display: flex;
   flex-direction: column;
   will-change: transform, opacity;
-  animation: photoLightboxZoomIn 0.54s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+  animation: photoLightboxZoomIn 0.68s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.photo-lightbox.is-closing .photo-lightbox__box {
+  animation: photoLightboxZoomOut 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 @keyframes photoLightboxFadeIn {
   from {
     opacity: 0;
-    backdrop-filter: blur(0px);
-    -webkit-backdrop-filter: blur(0px);
   }
 
   to {
     opacity: 1;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+  }
+}
+
+@keyframes photoLightboxFadeOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
   }
 }
 
 @keyframes photoLightboxZoomIn {
-  from {
-    opacity: 0.35;
+  0% {
+    opacity: 0.25;
     transform: translate3d(var(--origin-dx, 0px),
         var(--origin-dy, 24px),
-        0) scale(var(--origin-scale, 0.72));
+        0) rotate(var(--origin-rot, 0deg)) scale(var(--origin-scale, 0.35));
   }
 
-  to {
+  100% {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes photoLightboxZoomOut {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--origin-dx, 0px),
+        var(--origin-dy, 24px),
+        0) rotate(var(--origin-rot, 0deg)) scale(var(--origin-scale, 0.35));
   }
 }
 

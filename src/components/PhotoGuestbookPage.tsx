@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
-  BookOpen,
   Camera,
   Check,
   ExternalLink,
@@ -102,6 +101,7 @@ export const PhotoGuestbookPage: React.FC = () => {
   const filterEngineRef = useRef<HeterotopiaFilterEngine | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [flashActive, setFlashActive] = useState<boolean>(false);
+  const [screenLightActive, setScreenLightActive] = useState<boolean>(false);
   const [monoliths] = useState<FrameMonolithSet>(() =>
     createFrameMonolithSet(20261125)
   );
@@ -125,25 +125,49 @@ export const PhotoGuestbookPage: React.FC = () => {
   const [lightboxEntry, setLightboxEntry] = useState<GuestbookPhotoEntry | null>(
     null
   );
+  const [lightboxClosing, setLightboxClosing] = useState<boolean>(false);
+  const lightboxCloseTimerRef = useRef<number | null>(null);
   const [lightboxOrigin, setLightboxOrigin] = useState<{
     dx: number;
     dy: number;
     scale: number;
-  }>({ dx: 0, dy: 24, scale: 0.72 });
+    rot: string;
+  }>({ dx: 0, dy: 24, scale: 0.72, rot: '0deg' });
+
+  const closeLightbox = useCallback(() => {
+    if (!lightboxEntry || lightboxClosing) return;
+    setLightboxClosing(true);
+    if (lightboxCloseTimerRef.current) {
+      window.clearTimeout(lightboxCloseTimerRef.current);
+    }
+    lightboxCloseTimerRef.current = window.setTimeout(() => {
+      setLightboxEntry(null);
+      setLightboxClosing(false);
+      lightboxCloseTimerRef.current = null;
+    }, 360);
+  }, [lightboxEntry, lightboxClosing]);
 
   const openLightboxFromElement = (
     entry: GuestbookPhotoEntry,
     el: HTMLElement | null
   ) => {
+    if (lightboxCloseTimerRef.current) {
+      window.clearTimeout(lightboxCloseTimerRef.current);
+      lightboxCloseTimerRef.current = null;
+    }
+    setLightboxClosing(false);
     if (el && typeof window !== 'undefined') {
       const rect = el.getBoundingClientRect();
       const targetW = Math.min(window.innerWidth - 40, 820);
       const dx = rect.left + rect.width / 2 - window.innerWidth / 2;
       const dy = rect.top + rect.height / 2 - window.innerHeight / 2;
       const scale = Math.max(0.18, Math.min(0.85, rect.width / targetW));
-      setLightboxOrigin({ dx, dy, scale });
+      const rot =
+        window.getComputedStyle(el).getPropertyValue('--float-rot').trim() ||
+        '0deg';
+      setLightboxOrigin({ dx, dy, scale, rot });
     } else {
-      setLightboxOrigin({ dx: 0, dy: 24, scale: 0.72 });
+      setLightboxOrigin({ dx: 0, dy: 24, scale: 0.72, rot: '0deg' });
     }
     setLightboxEntry(entry);
   };
@@ -434,11 +458,11 @@ export const PhotoGuestbookPage: React.FC = () => {
   useEffect(() => {
     if (!lightboxEntry) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setLightboxEntry(null);
+      if (e.key === 'Escape') closeLightbox();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [lightboxEntry]);
+  }, [lightboxEntry, closeLightbox]);
 
   // Animate the monolith frame live when viewing any saved card in the lightbox
   useEffect(() => {
@@ -479,7 +503,10 @@ export const PhotoGuestbookPage: React.FC = () => {
           grayscale: false,
           elapsedSec,
           monoliths,
-          showCaption: false,
+          message: lightboxEntry.message,
+          showCaption: true,
+          orderNumber: lightboxEntry.orderNumber,
+          dateLabel: formatKoreaDate(lightboxEntry.createdAt),
           fastPreview: true,
         });
       };
@@ -495,19 +522,21 @@ export const PhotoGuestbookPage: React.FC = () => {
 
   const triggerShutterFlash = () => {
     setFlashActive(true);
-    window.setTimeout(() => setFlashActive(false), 220);
+    window.setTimeout(() => setFlashActive(false), 320);
   };
 
   const captureFromVideo = useCallback(() => {
     const engine = filterEngineRef.current;
     const video = videoRef.current;
     if (!engine || !video || video.videoWidth === 0 || video.videoHeight === 0) {
+      setScreenLightActive(false);
       return;
     }
 
     // Ensure latest filtered frame is painted before snapshotting
     engine.renderFrame(video, activeFilterRef.current);
     triggerShutterFlash();
+    window.setTimeout(() => setScreenLightActive(false), 180);
 
     const img = new Image();
     img.onload = () => {
@@ -522,7 +551,7 @@ export const PhotoGuestbookPage: React.FC = () => {
     img.src = engine.canvas.toDataURL('image/png');
   }, []);
 
-  // Fixed 3-second countdown shutter
+  // Fixed 3-second countdown shutter with physical screen-fill lighting
   const handleShutterClick = () => {
     if (cameraStatus !== 'ready') {
       setCameraRetryKey((k) => k + 1);
@@ -534,6 +563,15 @@ export const PhotoGuestbookPage: React.FC = () => {
 
   useEffect(() => {
     if (countdown === null || countdown <= 0) return;
+
+    // Turn on full-screen white fill light ~420ms before the photo is taken so the monitor illuminates the subject's face and camera AE stabilizes
+    let lightTimerId: number | null = null;
+    if (countdown === 1) {
+      lightTimerId = window.setTimeout(() => {
+        setScreenLightActive(true);
+      }, 580);
+    }
+
     const id = window.setTimeout(() => {
       if (countdown <= 1) {
         setCountdown(null);
@@ -542,7 +580,10 @@ export const PhotoGuestbookPage: React.FC = () => {
         setCountdown(countdown - 1);
       }
     }, 1000);
-    return () => window.clearTimeout(id);
+    return () => {
+      window.clearTimeout(id);
+      if (lightTimerId !== null) window.clearTimeout(lightTimerId);
+    };
   }, [countdown, captureFromVideo]);
 
   const handleRetake = () => {
@@ -614,7 +655,9 @@ export const PhotoGuestbookPage: React.FC = () => {
   };
 
   return (
-    <div className="photo-page">
+    <div
+      className={`photo-page ${lightboxEntry && !lightboxClosing ? 'is-lightbox-open' : ''}`}
+    >
       {/* Hidden video stream & full-resolution export canvas */}
       <video
         ref={videoRef}
@@ -883,15 +926,6 @@ export const PhotoGuestbookPage: React.FC = () => {
                     </button>
                   </div>
 
-                  <button
-                    type="button"
-                    className="photo-btn photo-btn--ghost"
-                    onClick={() => setActiveTab('gallery')}
-                  >
-                    <BookOpen size={15} aria-hidden="true" />
-                    <span>방명록 보기</span>
-                  </button>
-
                   {integration.returnUrl && (
                     <a
                       href={integration.returnUrl}
@@ -987,14 +1021,22 @@ export const PhotoGuestbookPage: React.FC = () => {
         </main>
       )}
 
+      {/* Full-viewport physical screen-fill light for illuminating subject during capture */}
+      {(screenLightActive || flashActive) && (
+        <div
+          className={`photo-screen-light ${flashActive ? 'is-decaying' : ''}`}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Lightbox Modal for Guestbook Entry */}
       {lightboxEntry && (
         <div
-          className="photo-lightbox"
+          className={`photo-lightbox ${lightboxClosing ? 'is-closing' : ''}`}
           role="dialog"
           aria-modal="true"
           aria-label="포토 방명록 상세"
-          onClick={() => setLightboxEntry(null)}
+          onClick={closeLightbox}
         >
           <div
             className="photo-lightbox__box"
@@ -1003,6 +1045,7 @@ export const PhotoGuestbookPage: React.FC = () => {
                 '--origin-dx': `${lightboxOrigin.dx}px`,
                 '--origin-dy': `${lightboxOrigin.dy}px`,
                 '--origin-scale': lightboxOrigin.scale,
+                '--origin-rot': lightboxOrigin.rot,
               } as React.CSSProperties
             }
             onClick={(e) => e.stopPropagation()}
@@ -1010,7 +1053,7 @@ export const PhotoGuestbookPage: React.FC = () => {
             <button
               type="button"
               className="photo-lightbox__close"
-              onClick={() => setLightboxEntry(null)}
+              onClick={closeLightbox}
               aria-label="닫기"
             >
               <X size={20} aria-hidden="true" />
