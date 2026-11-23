@@ -7,10 +7,8 @@
   min-height: 100svh;
   background-color: var(--pdf-black);
   /* Subtle lithographic registration dot-grid (static CSS, zero GPU cost) */
-  background-image: radial-gradient(
-    rgba(255, 255, 255, 0.075) 1px,
-    transparent 1px
-  );
+  background-image: radial-gradient(rgba(255, 255, 255, 0.075) 1px,
+      transparent 1px);
   background-size: 26px 26px;
   color: var(--ink-on-dark);
   display: flex;
@@ -246,13 +244,13 @@
   0% {
     transform: translate3d(0, 0, 0) rotate(var(--float-rot, 0deg)) scale(var(--float-scale, 1));
   }
+
   50% {
-    transform: translate3d(calc(var(--float-dx, 8px) * 0.6), var(--float-dy, -10px), 0)
-      rotate(calc(var(--float-rot, 0deg) + 1.4deg)) scale(var(--float-scale, 1));
+    transform: translate3d(calc(var(--float-dx, 8px) * 0.6), var(--float-dy, -10px), 0) rotate(calc(var(--float-rot, 0deg) + 1.4deg)) scale(var(--float-scale, 1));
   }
+
   100% {
-    transform: translate3d(var(--float-dx, 8px), calc(var(--float-dy, -10px) * -0.5), 0)
-      rotate(calc(var(--float-rot, 0deg) - 1.2deg)) scale(var(--float-scale, 1));
+    transform: translate3d(var(--float-dx, 8px), calc(var(--float-dy, -10px) * -0.5), 0) rotate(calc(var(--float-rot, 0deg) - 1.2deg)) scale(var(--float-scale, 1));
   }
 }
 
@@ -261,6 +259,7 @@
     opacity: 0;
     transform: translate3d(0, 26px, 0) rotate(0deg) scale(0.74);
   }
+
   100% {
     opacity: 0.96;
     transform: translate3d(0, 0, 0) rotate(var(--float-rot, 0deg)) scale(var(--float-scale, 1));
@@ -268,6 +267,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .photo-float-card,
   .photo-float-card.is-newest {
     animation: none;
@@ -328,12 +328,14 @@
   top: 0;
   left: 0;
 }
+
 .photo-crop--tl::before {
   top: 11px;
   left: 0;
   width: 8px;
   height: 1px;
 }
+
 .photo-crop--tl::after {
   top: 0;
   left: 11px;
@@ -345,12 +347,14 @@
   top: 0;
   right: 0;
 }
+
 .photo-crop--tr::before {
   top: 11px;
   right: 0;
   width: 8px;
   height: 1px;
 }
+
 .photo-crop--tr::after {
   top: 0;
   right: 11px;
@@ -362,12 +366,14 @@
   bottom: 0;
   left: 0;
 }
+
 .photo-crop--bl::before {
   bottom: 11px;
   left: 0;
   width: 8px;
   height: 1px;
 }
+
 .photo-crop--bl::after {
   bottom: 0;
   left: 11px;
@@ -379,12 +385,14 @@
   bottom: 0;
   right: 0;
 }
+
 .photo-crop--br::before {
   bottom: 11px;
   right: 0;
   width: 8px;
   height: 1px;
 }
+
 .photo-crop--br::after {
   bottom: 0;
   right: 11px;
@@ -439,6 +447,7 @@
   from {
     opacity: 0.92;
   }
+
   to {
     opacity: 0;
   }
@@ -655,23 +664,19 @@
 .photo-shutter-btn::before {
   width: 1px;
   height: 88px;
-  background: linear-gradient(
-    to bottom,
-    #ffffff 0 6px,
-    transparent 6px 82px,
-    #ffffff 82px 88px
-  );
+  background: linear-gradient(to bottom,
+      #ffffff 0 6px,
+      transparent 6px 82px,
+      #ffffff 82px 88px);
 }
 
 .photo-shutter-btn::after {
   height: 1px;
   width: 88px;
-  background: linear-gradient(
-    to right,
-    #ffffff 0 6px,
-    transparent 6px 82px,
-    #ffffff 82px 88px
-  );
+  background: linear-gradient(to right,
+      #ffffff 0 6px,
+      transparent 6px 82px,
+      #ffffff 82px 88px);
 }
 
 .photo-shutter-btn:hover:not(:disabled) {
@@ -731,6 +736,7 @@
     opacity: 0;
     transform: translate3d(0, 10px, 0);
   }
+
   to {
     opacity: 1;
     transform: translate3d(0, 0, 0);
@@ -1073,6 +1079,7 @@
     backdrop-filter: blur(0px);
     -webkit-backdrop-filter: blur(0px);
   }
+
   to {
     opacity: 1;
     backdrop-filter: blur(14px);
@@ -1083,13 +1090,11 @@
 @keyframes photoLightboxZoomIn {
   from {
     opacity: 0.35;
-    transform: translate3d(
-        var(--origin-dx, 0px),
+    transform: translate3d(var(--origin-dx, 0px),
         var(--origin-dy, 24px),
-        0
-      )
-      scale(var(--origin-scale, 0.72));
+        0) scale(var(--origin-scale, 0.72));
   }
+
   to {
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);

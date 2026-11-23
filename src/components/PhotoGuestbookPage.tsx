@@ -783,9 +783,8 @@ export const PhotoGuestbookPage: React.FC = () => {
                           type="button"
                           role="radio"
                           aria-checked={activeFilter === filterId}
-                          className={`photo-filter-opt ${
-                            activeFilter === filterId ? 'is-active' : ''
-                          }`}
+                          className={`photo-filter-opt ${activeFilter === filterId ? 'is-active' : ''
+                            }`}
                           onClick={() => handleSelectFilter(filterId)}
                         >
                           <sup className="photo-filter-idx">

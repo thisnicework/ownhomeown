@@ -210,23 +210,23 @@ export const EXHIBITION_SECTIONS: ExhibitionSectionData[] = [
       items: [
         {
           type: 'image',
-          src: '/previews/section-2/01.jpg',
+          src: '/previews/section-2/01.png',
           alt: 'SECTION 2 인터랙티브 픽셀 게임 〈공주를 그만두는 방법〉 타이틀 화면',
         },
         {
           type: 'image',
-          src: '/previews/section-2/02.jpg',
-          alt: 'SECTION 2 인터랙티브 픽셀 게임 〈공주를 그만두는 방법〉 미니게임 플레이 화면',
+          src: '/previews/section-2/02.png',
+          alt: 'SECTION 2 인터랙티브 픽셀 게임 〈공주를 그만두는 방법〉 방 탐색 플레이 화면',
         },
         {
           type: 'image',
-          src: '/previews/section-2/03.jpg',
-          alt: 'SECTION 2 인터랙티브 픽셀 게임 〈공주를 그만두는 방법〉 선택 화면',
+          src: '/previews/section-2/03.png',
+          alt: 'SECTION 2 인터랙티브 픽셀 게임 〈공주를 그만두는 방법〉 인어공주 미니게임 화면',
         },
         {
           type: 'image',
-          src: '/previews/section-2/04.jpg',
-          alt: 'SECTION 2 인터랙티브 픽셀 게임 〈공주를 그만두는 방법〉 픽셀 로고',
+          src: '/previews/section-2/04.png',
+          alt: 'SECTION 2 인터랙티브 픽셀 게임 〈공주를 그만두는 방법〉 동화 속 공간 대화 화면',
         },
       ],
     },
