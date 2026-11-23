@@ -84,9 +84,11 @@ export class HeterotopiaFilterEngine {
   private readonly pixelSize = 3;
   private readonly lerpWeight = 0.03;
 
-  // Slitscan filter state
+  // Slitscan filter state (absolute wall-clock time-based, device FPS independent)
   private scanY = 0;
   private slitscanReset = true;
+  private slitscanLastMs = 0;
+  private readonly slitscanSweepSec = 2.6;
 
   // Face tracking state (normalized to 640x480 reference coordinates)
   private targetFaceX = 320;
@@ -283,10 +285,12 @@ export class HeterotopiaFilterEngine {
         this.drawVideoCover(ctx, video, nx, ny, nw, nh);
       }
     } else if (filter === 'slitscan') {
+      const nowMs = performance.now();
       if (this.slitscanReset) {
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, w, h);
         this.scanY = 0;
+        this.slitscanLastMs = nowMs;
         this.slitscanReset = false;
       }
 
@@ -300,24 +304,33 @@ export class HeterotopiaFilterEngine {
       this.drawVideoCover(this.offscreenCtx, video, 0, 0, w, h);
       this.offscreenCtx.restore();
 
-      const scanSpeed = 2;
-      ctx.drawImage(
-        this.offscreen,
-        0,
-        this.scanY,
-        w,
-        scanSpeed,
-        0,
-        this.scanY,
-        w,
-        scanSpeed
-      );
+      // Advance strictly by elapsed wall-clock time so sweep speed is identical on 30/60/120Hz devices
+      const dtSec = Math.min(0.1, Math.max(0, (nowMs - this.slitscanLastMs) / 1000));
+      this.slitscanLastMs = nowMs;
+      const dy = (h / this.slitscanSweepSec) * dtSec;
 
-      this.scanY += scanSpeed;
-      if (this.scanY >= h) this.scanY = 0;
+      if (dy > 0) {
+        const yStart = Math.floor(this.scanY);
+        const rawEnd = this.scanY + dy;
+        if (rawEnd < h) {
+          const sliceH = Math.max(1, Math.ceil(rawEnd) - yStart);
+          ctx.drawImage(this.offscreen, 0, yStart, w, sliceH, 0, yStart, w, sliceH);
+          this.scanY = rawEnd;
+        } else {
+          // Finish bottom strip cleanly and wrap remainder from top
+          const bottomH = Math.max(1, h - yStart);
+          ctx.drawImage(this.offscreen, 0, yStart, w, bottomH, 0, yStart, w, bottomH);
+          const wrapY = rawEnd % h;
+          const topH = Math.ceil(wrapY);
+          if (topH > 0) {
+            ctx.drawImage(this.offscreen, 0, 0, w, topH, 0, 0, w, topH);
+          }
+          this.scanY = wrapY;
+        }
+      }
 
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, this.scanY, w, scanSpeed);
+      ctx.fillRect(0, Math.floor(this.scanY), w, 2);
     } else if (filter === 'kinetic') {
       const cols = Math.floor(w / this.pixelSize);
       const rows = Math.floor(h / this.pixelSize);
