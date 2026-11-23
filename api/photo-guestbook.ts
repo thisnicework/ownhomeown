@@ -2,6 +2,7 @@ import { del, get, list, put } from '@vercel/blob';
 
 interface StoredGuestbookEntry {
   id: string;
+  orderNumber: number;
   imageUrl: string;
   imagePathname?: string;
   message: string;
@@ -135,28 +136,43 @@ export async function GET(request: Request): Promise<Response> {
     );
 
     const fetched = await Promise.all(
-      sortedBlobs.map(async (blob): Promise<StoredGuestbookEntry | null> => {
+      sortedBlobs.map(async (blob): Promise<Partial<StoredGuestbookEntry> | null> => {
         const data = await readJsonBlob(blob.url, blob.pathname);
         if (!data || !data.id || !data.imageUrl || !data.createdAt) return null;
-        return {
-          id: data.id,
-          imageUrl: data.imageUrl,
-          imagePathname: data.imagePathname,
-          message: typeof data.message === 'string' ? data.message : '',
-          filter: typeof data.filter === 'string' ? data.filter : 'kinetic',
-          createdAt: data.createdAt,
-        };
+        return data;
       })
     );
 
-    const entries = fetched
-      .filter((item): item is StoredGuestbookEntry => item !== null)
+    // Sort oldest -> newest to assign stable sequential orderNumbers for any legacy entries
+    const chronological = fetched
+      .filter((item): item is Partial<StoredGuestbookEntry> => item !== null)
       .sort(
         (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
       );
 
-    return jsonResponse({ entries }, 200);
+    let maxNum = 0;
+    const numbered: StoredGuestbookEntry[] = chronological.map((data, idx) => {
+      const assigned =
+        typeof data.orderNumber === 'number' && data.orderNumber > 0
+          ? Math.floor(data.orderNumber)
+          : idx + 1;
+      if (assigned > maxNum) maxNum = assigned;
+      return {
+        id: data.id!,
+        orderNumber: assigned,
+        imageUrl: data.imageUrl!,
+        imagePathname: data.imagePathname,
+        message: typeof data.message === 'string' ? data.message : '',
+        filter: typeof data.filter === 'string' ? data.filter : 'kinetic',
+        createdAt: data.createdAt!,
+      };
+    });
+
+    const entries = numbered.reverse(); // newest first
+    const nextNumber = maxNum + 1;
+
+    return jsonResponse({ entries, nextNumber }, 200);
   } catch (err) {
     console.error('[api/photo-guestbook GET] failed:', err);
     return jsonResponse({ error: 'FAILED_TO_LIST', entries: [] }, 500);
@@ -175,6 +191,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const body = (await request.json()) as {
       id?: string;
+      orderNumber?: number;
       imageDataUrl?: string;
       message?: string;
       filter?: string;
@@ -216,6 +233,22 @@ export async function POST(request: Request): Promise<Response> {
         ? body.filter.trim().slice(0, 24)
         : 'kinetic';
 
+    // Determine sequential orderNumber (preserve explicit valid number or assign next)
+    let orderNumber =
+      typeof body.orderNumber === 'number' &&
+      Number.isInteger(body.orderNumber) &&
+      body.orderNumber > 0
+        ? body.orderNumber
+        : 0;
+
+    if (orderNumber === 0) {
+      const { blobs: existingBlobs } = await list({
+        prefix: ENTRY_PREFIX,
+        limit: 1000,
+      });
+      orderNumber = existingBlobs.length + 1;
+    }
+
     // 1. Upload image binary to Vercel Blob (auto-handles public or private store)
     const imageBlob = await putAutoAccess(
       `${IMAGE_PREFIX}${rawId}.${ext}`,
@@ -231,6 +264,7 @@ export async function POST(request: Request): Promise<Response> {
     // 2. Upload entry metadata JSON to Vercel Blob
     const entry: StoredGuestbookEntry = {
       id: rawId,
+      orderNumber,
       imageUrl: resolvedImageUrl,
       imagePathname: imageBlob.pathname,
       message,

@@ -178,6 +178,29 @@
   object-fit: cover;
 }
 
+.photo-float-card__num {
+  position: absolute;
+  top: 0.32rem;
+  left: 0.36rem;
+  padding: 0.1rem 0.32rem;
+  background: rgba(0, 0, 0, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: #ffffff;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+}
+
+.photo-card__num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.04em;
+}
+
 .photo-float-card__caption {
   position: absolute;
   inset: auto 0 0 0;

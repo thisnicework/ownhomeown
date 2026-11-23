@@ -1,5 +1,7 @@
 export interface GuestbookPhotoEntry {
   id: string;
+  /** Sequential photo archive number (#001, #002, ...) */
+  orderNumber: number;
   /** Public Vercel Blob URL or local compressed data URL */
   imageDataUrl: string;
   /** Visitor guestbook message */
@@ -105,16 +107,37 @@ function saveLocalGuestbookEntries(entries: GuestbookPhotoEntry[]): void {
 }
 
 /** Fetches persisted entries from Vercel Blob (/api/photo-guestbook) and merges with local fallback */
-export async function fetchGuestbookEntries(): Promise<GuestbookPhotoEntry[]> {
+export async function fetchGuestbookEntries(): Promise<{
+  entries: GuestbookPhotoEntry[];
+  nextNumber: number;
+}> {
   const local = loadLocalGuestbookEntries();
+  const assignFallbackNumbers = (list: GuestbookPhotoEntry[]) => {
+    const asc = [...list].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+    let maxNum = 0;
+    const out = asc.map((item, idx) => {
+      const n =
+        typeof item.orderNumber === 'number' && item.orderNumber > 0
+          ? item.orderNumber
+          : idx + 1;
+      if (n > maxNum) maxNum = n;
+      return { ...item, orderNumber: n };
+    });
+    return { entries: out.reverse(), nextNumber: maxNum + 1 };
+  };
+
   const config = getGuestbookIntegrationConfig();
 
   try {
     const res = await fetch(config.apiUrl, { cache: 'no-store' });
-    if (!res.ok) return local;
+    if (!res.ok) return assignFallbackNumbers(local);
     const data = (await res.json()) as {
+      nextNumber?: number;
       entries?: Array<{
         id: string;
+        orderNumber?: number;
         imageUrl?: string;
         imageDataUrl?: string;
         message?: string;
@@ -124,12 +147,16 @@ export async function fetchGuestbookEntries(): Promise<GuestbookPhotoEntry[]> {
       }>;
     };
 
-    if (!Array.isArray(data.entries)) return local;
+    if (!Array.isArray(data.entries)) return assignFallbackNumbers(local);
 
     const remote: GuestbookPhotoEntry[] = data.entries
       .filter((e) => e && e.id && (e.imageUrl || e.imageDataUrl) && e.createdAt)
-      .map((e) => ({
+      .map((e, idx, arr) => ({
         id: e.id,
+        orderNumber:
+          typeof e.orderNumber === 'number' && e.orderNumber > 0
+            ? e.orderNumber
+            : arr.length - idx,
         imageDataUrl: e.imageUrl || e.imageDataUrl || '',
         message: e.message || '',
         author: e.author || '',
@@ -144,11 +171,14 @@ export async function fetchGuestbookEntries(): Promise<GuestbookPhotoEntry[]> {
     const localOnly = local.filter(
       (item) => item.syncStatus === 'local' && !remoteIds.has(item.id)
     );
-    return [...remote, ...localOnly].sort(
+    const merged = [...remote, ...localOnly].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
+    const maxOrder = merged.reduce((m, e) => Math.max(m, e.orderNumber || 0), 0);
+    const nextNumber = Math.max(data.nextNumber || 1, maxOrder + 1);
+    return { entries: merged, nextNumber };
   } catch {
-    return local;
+    return assignFallbackNumbers(local);
   }
 }
 
@@ -198,10 +228,18 @@ export async function submitPhotoToGuestbook(params: {
   fullCanvas: HTMLCanvasElement;
   message: string;
   author: string;
+  orderNumber: number;
   filter?: string;
   grayscale: boolean;
 }): Promise<GuestbookSubmitResult> {
-  const { fullCanvas, message, author, filter = 'kinetic', grayscale } = params;
+  const {
+    fullCanvas,
+    message,
+    author,
+    orderNumber,
+    filter = 'kinetic',
+    grayscale,
+  } = params;
   const createdAt = new Date().toISOString();
   const id = `oho-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -212,6 +250,7 @@ export async function submitPhotoToGuestbook(params: {
   let remoteSynced = false;
   let remoteError: string | undefined;
   let finalImageUrl = archiveThumbDataUrl;
+  let finalOrderNumber = orderNumber;
 
   try {
     const res = await fetch(config.apiUrl, {
@@ -219,6 +258,7 @@ export async function submitPhotoToGuestbook(params: {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id,
+        orderNumber,
         imageDataUrl: fullJpegDataUrl,
         message: message.trim(),
         author: author.trim(),
@@ -231,10 +271,13 @@ export async function submitPhotoToGuestbook(params: {
     if (res.ok) {
       remoteSynced = true;
       const payload = (await res.json().catch(() => null)) as {
-        entry?: { imageUrl?: string };
+        entry?: { imageUrl?: string; orderNumber?: number };
       } | null;
       if (payload?.entry?.imageUrl) {
         finalImageUrl = payload.entry.imageUrl;
+      }
+      if (payload?.entry?.orderNumber) {
+        finalOrderNumber = payload.entry.orderNumber;
       }
     } else {
       remoteError = `HTTP ${res.status}`;
@@ -248,6 +291,7 @@ export async function submitPhotoToGuestbook(params: {
     type: 'OWNHOMEOWN_PHOTO_GUESTBOOK_SUBMIT',
     payload: {
       id,
+      orderNumber: finalOrderNumber,
       imageUrl: finalImageUrl,
       imageDataUrl: fullJpegDataUrl,
       message: message.trim(),
@@ -272,6 +316,7 @@ export async function submitPhotoToGuestbook(params: {
 
   const entry: GuestbookPhotoEntry = {
     id,
+    orderNumber: finalOrderNumber,
     imageDataUrl: finalImageUrl,
     message: message.trim(),
     author: author.trim(),

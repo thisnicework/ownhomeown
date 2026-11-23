@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import {
   createFrameMonolithSet,
+  formatOrderNumber,
   FRAME_H,
   FRAME_W,
   renderExhibitionPhotoFrame,
@@ -113,6 +114,10 @@ export const PhotoGuestbookPage: React.FC = () => {
   const [entries, setEntries] = useState<GuestbookPhotoEntry[]>(() =>
     loadLocalGuestbookEntries()
   );
+  const [nextOrderNumber, setNextOrderNumber] = useState<number>(() => {
+    const local = loadLocalGuestbookEntries();
+    return local.length + 1;
+  });
   const [newestEntryId, setNewestEntryId] = useState<string | null>(null);
   const [lightboxEntry, setLightboxEntry] = useState<GuestbookPhotoEntry | null>(
     null
@@ -228,9 +233,10 @@ export const PhotoGuestbookPage: React.FC = () => {
   // Load persisted photo guestbook entries from Vercel Blob on mount
   useEffect(() => {
     let cancelled = false;
-    void fetchGuestbookEntries().then((loaded) => {
+    void fetchGuestbookEntries().then(({ entries: loaded, nextNumber }) => {
       if (!cancelled) {
         setEntries(loaded);
+        setNextOrderNumber(nextNumber);
       }
     });
     return () => {
@@ -282,14 +288,16 @@ export const PhotoGuestbookPage: React.FC = () => {
         grayscale: false,
         elapsedSec,
         monoliths,
-        showCaption: false,
+        showCaption: true,
+        orderNumber: nextOrderNumber,
+        dateLabel: todayLabel,
         fastPreview: true,
       });
     };
 
     rafId = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(rafId);
-  }, [activeTab, stage, cameraStatus, monoliths]);
+  }, [activeTab, stage, cameraStatus, monoliths, nextOrderNumber, todayLabel]);
 
   // Render static high-res 1600x1200 preview when composing or done
   useEffect(() => {
@@ -309,13 +317,14 @@ export const PhotoGuestbookPage: React.FC = () => {
         monoliths,
         message,
         showCaption: true,
+        orderNumber: nextOrderNumber,
         dateLabel: todayLabel,
       });
     };
 
     drawTo(previewCanvasRef.current);
     drawTo(exportCanvasRef.current);
-  }, [activeTab, stage, captured, monoliths, message, todayLabel]);
+  }, [activeTab, stage, captured, monoliths, message, nextOrderNumber, todayLabel]);
 
   const triggerShutterFlash = () => {
     setFlashActive(true);
@@ -394,6 +403,7 @@ export const PhotoGuestbookPage: React.FC = () => {
         monoliths,
         message,
         showCaption: true,
+        orderNumber: nextOrderNumber,
         dateLabel: todayLabel,
       });
     }
@@ -404,10 +414,12 @@ export const PhotoGuestbookPage: React.FC = () => {
         fullCanvas: exportCanvas,
         message,
         author: '',
+        orderNumber: nextOrderNumber,
         filter: activeFilterRef.current,
         grayscale: false,
       });
       setEntries((prev) => [result.entry, ...prev]);
+      setNextOrderNumber((n) => Math.max(n + 1, result.entry.orderNumber + 1));
       setNewestEntryId(result.entry.id);
       setLastSubmitSynced(result.remoteSynced);
       setStage('done');
@@ -506,6 +518,9 @@ export const PhotoGuestbookPage: React.FC = () => {
                       alt={entry.message || '포토 방명록'}
                       loading="lazy"
                     />
+                    <span className="photo-float-card__num">
+                      {formatOrderNumber(entry.orderNumber)}
+                    </span>
                     {entry.message && (
                       <span className="photo-float-card__caption">
                         <em>{entry.message}</em>
@@ -773,12 +788,17 @@ export const PhotoGuestbookPage: React.FC = () => {
                     />
                   </button>
                   <div className="photo-card__meta">
+                    <div className="photo-card__row">
+                      <span className="photo-card__num">
+                        {formatOrderNumber(entry.orderNumber)}
+                      </span>
+                      <span className="photo-card__date">
+                        {formatKoreaDate(entry.createdAt)}
+                      </span>
+                    </div>
                     {entry.message && (
                       <p className="photo-card__msg">{entry.message}</p>
                     )}
-                    <span className="photo-card__date">
-                      {formatKoreaDate(entry.createdAt)}
-                    </span>
                   </div>
                 </article>
               ))}
@@ -828,6 +848,7 @@ export const PhotoGuestbookPage: React.FC = () => {
               )}
               <div className="photo-lightbox__footer-row">
                 <span className="photo-card__date">
+                  {formatOrderNumber(lightboxEntry.orderNumber)} ·{' '}
                   {formatKoreaDate(lightboxEntry.createdAt)}
                 </span>
                 <div className="photo-lightbox__actions">

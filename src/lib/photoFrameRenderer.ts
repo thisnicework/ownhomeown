@@ -33,8 +33,15 @@ export interface PhotoFrameOptions {
   showCaption?: boolean;
   /** Optional formatted date stamp (e.g. "2026.11.25") */
   dateLabel?: string;
+  /** Sequential archive number (e.g. 1 -> "#001") */
+  orderNumber?: number;
   /** Skip expensive software Gaussian shadowBlur during live preview for older CPUs */
   fastPreview?: boolean;
+}
+
+export function formatOrderNumber(n?: number): string {
+  if (!n || n < 1) return '';
+  return `#${String(Math.floor(n)).padStart(3, '0')}`;
 }
 
 // Exact 4:3 Landscape photo card (1600x1200) with 3:2 inner photo (1140x760)
@@ -557,6 +564,7 @@ export function renderExhibitionPhotoFrame(
     author = '',
     showCaption = true,
     dateLabel,
+    orderNumber,
     fastPreview = false,
   } = options;
 
@@ -643,39 +651,47 @@ export function renderExhibitionPhotoFrame(
     ctx.restore();
   }
 
-  // 5. Optional editorial guestbook text card at the bottom of the 1-cut photo
+  // 5. Editorial guestbook text + sequential #001 number & date at bottom of 3:2 photo
   const trimmedMsg = message.trim();
   const trimmedAuthor = author.trim();
-  if (showCaption && (trimmedMsg || trimmedAuthor)) {
+  const numLabel = formatOrderNumber(orderNumber);
+  const leftMeta = [numLabel, trimmedAuthor ? `— ${trimmedAuthor}` : '']
+    .filter(Boolean)
+    .join('  ');
+
+  if (showCaption && (trimmedMsg || leftMeta || dateLabel)) {
     const padX = 44;
-    const padTop = 24;
-    const padBottom = 26;
+    const padTop = trimmedMsg ? 24 : 18;
+    const padBottom = 24;
     const maxTextW = SCR_W - padX * 2;
 
     ctx.font =
       "400 28px 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif";
     const msgLines = trimmedMsg ? wrapTextLines(ctx, trimmedMsg, maxTextW, 3) : [];
     const lineH = 40;
-    const metaH = trimmedAuthor || dateLabel ? 30 : 0;
+    const metaH = leftMeta || dateLabel ? 28 : 0;
     const gapBetween = msgLines.length > 0 && metaH > 0 ? 14 : 0;
     const cardH = padTop + msgLines.length * lineH + gapBetween + metaH + padBottom;
     const cardY = SCR_Y + SCR_H - cardH;
 
     // Subtle dark gradient scrim extending slightly above the card
-    const grad = ctx.createLinearGradient(0, cardY - 76, 0, SCR_Y + SCR_H);
+    const scrimExtra = trimmedMsg ? 76 : 44;
+    const grad = ctx.createLinearGradient(0, cardY - scrimExtra, 0, SCR_Y + SCR_H);
     grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    grad.addColorStop(0.28, 'rgba(0, 0, 0, 0.72)');
-    grad.addColorStop(1, 'rgba(0, 0, 0, 0.92)');
+    grad.addColorStop(0.32, 'rgba(0, 0, 0, 0.68)');
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0.90)');
     ctx.fillStyle = grad;
-    ctx.fillRect(SCR_X, cardY - 76, SCR_W, cardH + 76);
+    ctx.fillRect(SCR_X, cardY - scrimExtra, SCR_W, cardH + scrimExtra);
 
-    // Hairline top divider
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.24)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(SCR_X + padX, cardY + 2);
-    ctx.lineTo(SCR_X + SCR_W - padX, cardY + 2);
-    ctx.stroke();
+    // Hairline top divider when message is present
+    if (trimmedMsg) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.24)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(SCR_X + padX, cardY + 2);
+      ctx.lineTo(SCR_X + SCR_W - padX, cardY + 2);
+      ctx.stroke();
+    }
 
     // Message body
     ctx.fillStyle = '#f5f5f5';
@@ -687,17 +703,18 @@ export function renderExhibitionPhotoFrame(
       curY += lineH;
     }
 
-    // Author + Date meta row
+    // Number (#001) + Date meta row
     if (metaH > 0) {
       curY += gapBetween;
       ctx.font =
-        "500 21px 'IBM Plex Mono', 'Pretendard Variable', 'Pretendard', monospace";
-      ctx.fillStyle = 'rgba(242, 242, 242, 0.74)';
-      if (trimmedAuthor) {
+        "500 22px 'IBM Plex Mono', 'Pretendard Variable', 'Pretendard', monospace";
+      if (leftMeta) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
         ctx.textAlign = 'left';
-        ctx.fillText(`— ${trimmedAuthor}`, SCR_X + padX, curY);
+        ctx.fillText(leftMeta, SCR_X + padX, curY);
       }
       if (dateLabel) {
+        ctx.fillStyle = 'rgba(242, 242, 242, 0.72)';
         ctx.textAlign = 'right';
         ctx.fillText(dateLabel, SCR_X + SCR_W - padX, curY);
       }
