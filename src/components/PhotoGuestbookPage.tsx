@@ -499,7 +499,7 @@ export const PhotoGuestbookPage: React.FC = () => {
 
   const triggerShutterFlash = () => {
     setFlashActive(true);
-    window.setTimeout(() => setFlashActive(false), 320);
+    window.setTimeout(() => setFlashActive(false), 720);
   };
 
   const captureFromVideo = useCallback(() => {
@@ -513,7 +513,7 @@ export const PhotoGuestbookPage: React.FC = () => {
     // Ensure latest filtered frame is painted before snapshotting
     engine.renderFrame(video, activeFilterRef.current);
     triggerShutterFlash();
-    window.setTimeout(() => setScreenLightActive(false), 180);
+    window.setTimeout(() => setScreenLightActive(false), 120);
 
     const img = new Image();
     img.onload = () => {
@@ -528,7 +528,7 @@ export const PhotoGuestbookPage: React.FC = () => {
     img.src = engine.canvas.toDataURL('image/png');
   }, []);
 
-  // Fixed 3-second countdown shutter with physical screen-fill lighting
+  // Fixed 3-second countdown shutter with physical xenon strobe burst
   const handleShutterClick = () => {
     if (cameraStatus !== 'ready') {
       setCameraRetryKey((k) => k + 1);
@@ -541,12 +541,12 @@ export const PhotoGuestbookPage: React.FC = () => {
   useEffect(() => {
     if (countdown === null || countdown <= 0) return;
 
-    // Turn on full-screen white fill light ~420ms before the photo is taken so the monitor illuminates the subject's face and camera AE stabilizes
+    // Fire the strobe right before the shutter (~140ms before capture) like a real camera flash pre-burst + main burst
     let lightTimerId: number | null = null;
     if (countdown === 1) {
       lightTimerId = window.setTimeout(() => {
         setScreenLightActive(true);
-      }, 580);
+      }, 860);
     }
 
     const id = window.setTimeout(() => {
