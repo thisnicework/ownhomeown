@@ -18,6 +18,10 @@ import {
   FRAME_H,
   FRAME_W,
   renderExhibitionPhotoFrame,
+  SCR_H,
+  SCR_W,
+  SCR_X,
+  SCR_Y,
   type FrameMonolithSet,
 } from '../lib/photoFrameRenderer';
 import {
@@ -129,6 +133,7 @@ export const PhotoGuestbookPage: React.FC = () => {
   // Canvas refs
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const exportCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const lightboxCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const animStartRef = useRef<number | null>(null);
   const latestElapsedRef = useRef<number>(0);
 
@@ -351,32 +356,114 @@ export const PhotoGuestbookPage: React.FC = () => {
     return () => window.cancelAnimationFrame(rafId);
   }, [activeTab, stage, cameraStatus, monoliths, nextOrderNumber, todayLabel]);
 
-  // Render static high-res 1600x1200 preview when composing or done
+  // Keep frame animated in compose & done stages too, and update export canvas once on state change
   useEffect(() => {
     if (activeTab !== 'booth' || stage === 'capture' || !captured) return;
 
-    const drawTo = (canvas: HTMLCanvasElement | null) => {
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      renderExhibitionPhotoFrame(ctx, {
+    // Paint full-res 1600x1200 export canvas once for crisp download/upload
+    const exportCanvas = exportCanvasRef.current;
+    if (exportCanvas) {
+      const ectx = exportCanvas.getContext('2d');
+      if (ectx) {
+        renderExhibitionPhotoFrame(ectx, {
+          source: captured.image,
+          sourceWidth: captured.width,
+          sourceHeight: captured.height,
+          mirror: false,
+          grayscale: false,
+          elapsedSec: captured.frozenElapsedSec,
+          monoliths,
+          message,
+          showCaption: true,
+          orderNumber: nextOrderNumber,
+          dateLabel: todayLabel,
+        });
+      }
+    }
+
+    // Keep preview canvas monoliths smoothly animating
+    const previewCanvas = previewCanvasRef.current;
+    if (!previewCanvas) return;
+    const pctx = previewCanvas.getContext('2d');
+    if (!pctx) return;
+
+    let rafId = 0;
+    const tick = (now: number) => {
+      rafId = window.requestAnimationFrame(tick);
+      if (animStartRef.current === null) animStartRef.current = now;
+      const elapsedSec = (now - animStartRef.current) * 0.001;
+      latestElapsedRef.current = elapsedSec;
+      renderExhibitionPhotoFrame(pctx, {
         source: captured.image,
         sourceWidth: captured.width,
         sourceHeight: captured.height,
         mirror: false,
         grayscale: false,
-        elapsedSec: captured.frozenElapsedSec,
+        elapsedSec,
         monoliths,
         message,
         showCaption: true,
         orderNumber: nextOrderNumber,
         dateLabel: todayLabel,
+        fastPreview: true,
       });
     };
-
-    drawTo(previewCanvasRef.current);
-    drawTo(exportCanvasRef.current);
+    rafId = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(rafId);
   }, [activeTab, stage, captured, monoliths, message, nextOrderNumber, todayLabel]);
+
+  // Animate the monolith frame live when viewing any saved card in the lightbox
+  useEffect(() => {
+    if (!lightboxEntry) return;
+    const canvas = lightboxCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let cancelled = false;
+    let rafId = 0;
+    const startMs = performance.now();
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      if (cancelled) return;
+      const nw = img.naturalWidth;
+      const nh = img.naturalHeight;
+      // Crop exact inner 3:2 photo region from saved 4:3 framed card (proportional to natural size)
+      const sourceCrop = {
+        sx: (SCR_X / FRAME_W) * nw,
+        sy: (SCR_Y / FRAME_H) * nh,
+        sw: (SCR_W / FRAME_W) * nw,
+        sh: (SCR_H / FRAME_H) * nh,
+      };
+
+      const tick = (now: number) => {
+        if (cancelled) return;
+        rafId = window.requestAnimationFrame(tick);
+        const elapsedSec = (now - startMs) * 0.001;
+        renderExhibitionPhotoFrame(ctx, {
+          source: img,
+          sourceWidth: nw,
+          sourceHeight: nh,
+          sourceCrop,
+          mirror: false,
+          grayscale: false,
+          elapsedSec,
+          monoliths,
+          showCaption: false,
+          fastPreview: true,
+        });
+      };
+      rafId = window.requestAnimationFrame(tick);
+    };
+    img.src = lightboxEntry.imageDataUrl;
+
+    return () => {
+      cancelled = true;
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
+  }, [lightboxEntry, monoliths]);
 
   const triggerShutterFlash = () => {
     setFlashActive(true);
@@ -888,10 +975,12 @@ export const PhotoGuestbookPage: React.FC = () => {
               <X size={20} aria-hidden="true" />
             </button>
 
-            <img
-              src={lightboxEntry.imageDataUrl}
-              alt={lightboxEntry.message || '포토 방명록'}
+            <canvas
+              ref={lightboxCanvasRef}
+              width={FRAME_W / 2}
+              height={FRAME_H / 2}
               className="photo-lightbox__img"
+              aria-label={lightboxEntry.message || '포토 방명록'}
             />
 
             <div className="photo-lightbox__info">

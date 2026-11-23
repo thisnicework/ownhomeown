@@ -35,6 +35,8 @@ export interface PhotoFrameOptions {
   dateLabel?: string;
   /** Sequential archive number (e.g. 1 -> "#001") */
   orderNumber?: number;
+  /** Optional custom source crop rect (in source image pixels) instead of full-image cover crop */
+  sourceCrop?: { sx: number; sy: number; sw: number; sh: number };
   /** Skip expensive software Gaussian shadowBlur during live preview for older CPUs */
   fastPreview?: boolean;
 }
@@ -255,7 +257,7 @@ function morphPose(
   const idx = Math.floor(totalCycle) % poses.length;
   const nextIdx = (idx + 1) % poses.length;
   const raw = totalCycle - Math.floor(totalCycle);
-  const hold = 0.16;
+  const hold = 0.1;
   const morphT =
     raw > hold ? easeInOutCubic(clamp01((raw - hold) / (1 - hold))) : 0;
 
@@ -283,7 +285,7 @@ function drawHorizontalMonolith(
 ) {
   const overscan = 48;
   const drawW = FRAME_W + overscan * 2;
-  const drift = Math.sin(elapsed * 0.45 + (isTop ? 0 : 1.7)) * 22;
+  const drift = Math.sin(elapsed * 0.85 + (isTop ? 0 : 1.7)) * 28;
   const shiftX = -overscan + drift;
   const baseY = isTop ? 0 : FRAME_H - bandH;
 
@@ -322,7 +324,7 @@ function drawVerticalMonolith(
 ) {
   const overscan = 60;
   const drawH = FRAME_H + overscan * 2;
-  const drift = Math.sin(elapsed * 0.38 + (isLeft ? 0.8 : 2.5)) * 26;
+  const drift = Math.sin(elapsed * 0.72 + (isLeft ? 0.8 : 2.5)) * 32;
   const shiftY = -overscan + drift;
   const baseX = isLeft ? 0 : FRAME_W - bandW;
 
@@ -565,6 +567,7 @@ export function renderExhibitionPhotoFrame(
     showCaption = true,
     dateLabel,
     orderNumber,
+    sourceCrop,
     fastPreview = false,
   } = options;
 
@@ -580,11 +583,11 @@ export function renderExhibitionPhotoFrame(
   ctx.fillStyle = '#808080';
   ctx.fillRect(0, 0, FRAME_W, FRAME_H);
 
-  // 2. 4-side HeroMotionForms black monoliths proportioned for 1600x1200 (4:3)
-  drawVerticalMonolith(ctx, monoliths.leftPoses, true, elapsedSec, 8.6, 1.4, 225);
-  drawVerticalMonolith(ctx, monoliths.rightPoses, false, elapsedSec, 9.2, 3.8, 225);
-  drawHorizontalMonolith(ctx, monoliths.topPoses, true, elapsedSec, 7.2, 0.6, 225);
-  drawHorizontalMonolith(ctx, monoliths.bottomPoses, false, elapsedSec, 7.8, 2.9, 225);
+  // 2. 4-side HeroMotionForms black monoliths (livelier kinetic tempo on /photo)
+  drawVerticalMonolith(ctx, monoliths.leftPoses, true, elapsedSec, 4.8, 1.4, 225);
+  drawVerticalMonolith(ctx, monoliths.rightPoses, false, elapsedSec, 5.2, 3.8, 225);
+  drawHorizontalMonolith(ctx, monoliths.topPoses, true, elapsedSec, 4.0, 0.6, 225);
+  drawHorizontalMonolith(ctx, monoliths.bottomPoses, false, elapsedSec, 4.4, 2.9, 225);
 
   // 3. Sharp 90-degree drop shadow + matte bezel + subtle 2px rim highlight
   const bx = SCR_X - BEZEL;
@@ -622,19 +625,26 @@ export function renderExhibitionPhotoFrame(
   ctx.fillRect(SCR_X, SCR_Y, SCR_W, SCR_H);
 
   if (source && sourceWidth > 0 && sourceHeight > 0) {
-    const srcRatio = sourceWidth / sourceHeight;
-    const dstRatio = SCR_W / SCR_H;
     let sx = 0;
     let sy = 0;
     let sw = sourceWidth;
     let sh = sourceHeight;
 
-    if (srcRatio > dstRatio) {
-      sw = sourceHeight * dstRatio;
-      sx = (sourceWidth - sw) / 2;
+    if (sourceCrop) {
+      sx = sourceCrop.sx;
+      sy = sourceCrop.sy;
+      sw = sourceCrop.sw;
+      sh = sourceCrop.sh;
     } else {
-      sh = sourceWidth / dstRatio;
-      sy = (sourceHeight - sh) / 2;
+      const srcRatio = sourceWidth / sourceHeight;
+      const dstRatio = SCR_W / SCR_H;
+      if (srcRatio > dstRatio) {
+        sw = sourceHeight * dstRatio;
+        sx = (sourceWidth - sw) / 2;
+      } else {
+        sh = sourceWidth / dstRatio;
+        sy = (sourceHeight - sh) / 2;
+      }
     }
 
     ctx.save();
