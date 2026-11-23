@@ -4,12 +4,10 @@ import {
   BookOpen,
   Camera,
   Check,
-  Download,
   ExternalLink,
   RefreshCw,
   RotateCcw,
   Share2,
-  Trash2,
   X,
 } from 'lucide-react';
 import {
@@ -30,8 +28,6 @@ import {
   type PhotoFilterId,
 } from '../lib/heterotopiaFilters';
 import {
-  deleteGuestbookEntry,
-  downloadCanvasAsPng,
   fetchGuestbookEntries,
   formatKoreaDate,
   getGuestbookIntegrationConfig,
@@ -567,28 +563,13 @@ export const PhotoGuestbookPage: React.FC = () => {
     }
   };
 
-  const handleDownload = () => {
-    const canvas = exportCanvasRef.current;
-    if (!canvas) return;
-    downloadCanvasAsPng(canvas, `ownhomeown-photo-${Date.now()}.png`);
-    setShareFeedback('1600×1200 이미지를 저장했습니다.');
-    window.setTimeout(() => setShareFeedback(''), 2600);
-  };
-
   const handleShare = async () => {
     const canvas = exportCanvasRef.current;
     if (!canvas) return;
     const shared = await shareCanvasImage(canvas, message);
     if (!shared) {
-      handleDownload();
-    }
-  };
-
-  const handleDeleteEntry = async (id: string) => {
-    await deleteGuestbookEntry(id);
-    setEntries((prev) => prev.filter((e) => e.id !== id));
-    if (lightboxEntry?.id === id) {
-      setLightboxEntry(null);
+      setShareFeedback('이 기기에서는 직접 공유를 지원하지 않습니다.');
+      window.setTimeout(() => setShareFeedback(''), 2600);
     }
   };
 
@@ -854,10 +835,10 @@ export const PhotoGuestbookPage: React.FC = () => {
                     <button
                       type="button"
                       className="photo-btn photo-btn--primary"
-                      onClick={handleDownload}
+                      onClick={handleResetAll}
                     >
-                      <Download size={16} aria-hidden="true" />
-                      <span>이미지 저장</span>
+                      <Camera size={15} aria-hidden="true" />
+                      <span>한 장 더 찍기</span>
                     </button>
                     <button
                       type="button"
@@ -869,24 +850,14 @@ export const PhotoGuestbookPage: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="photo-action-row">
-                    <button
-                      type="button"
-                      className="photo-btn photo-btn--ghost"
-                      onClick={() => setActiveTab('gallery')}
-                    >
-                      <BookOpen size={15} aria-hidden="true" />
-                      <span>방명록 보기</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="photo-btn photo-btn--ghost"
-                      onClick={handleResetAll}
-                    >
-                      <Camera size={15} aria-hidden="true" />
-                      <span>한 장 더 찍기</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    className="photo-btn photo-btn--ghost"
+                    onClick={() => setActiveTab('gallery')}
+                  >
+                    <BookOpen size={15} aria-hidden="true" />
+                    <span>방명록 보기</span>
+                  </button>
 
                   {integration.returnUrl && (
                     <a
@@ -1020,24 +991,6 @@ export const PhotoGuestbookPage: React.FC = () => {
                   {formatOrderNumber(lightboxEntry.orderNumber)} ·{' '}
                   {formatKoreaDate(lightboxEntry.createdAt)}
                 </span>
-                <div className="photo-lightbox__actions">
-                  <a
-                    href={lightboxEntry.imageDataUrl}
-                    download={`ownhomeown-${lightboxEntry.id}.jpg`}
-                    className="photo-btn photo-btn--secondary photo-btn--compact"
-                  >
-                    <Download size={14} aria-hidden="true" />
-                    <span>저장</span>
-                  </a>
-                  <button
-                    type="button"
-                    className="photo-btn photo-btn--ghost photo-btn--compact"
-                    onClick={() => void handleDeleteEntry(lightboxEntry.id)}
-                  >
-                    <Trash2 size={14} aria-hidden="true" />
-                    <span>삭제</span>
-                  </button>
-                </div>
               </div>
             </div>
           </div>
