@@ -102,6 +102,7 @@ export const PhotoGuestbookPage: React.FC = () => {
   const [cameraStatus, setCameraStatus] = useState<
     'idle' | 'starting' | 'ready' | 'error'
   >('idle');
+  const [cameraGranted, setCameraGranted] = useState<boolean>(false);
   const [cameraRetryKey, setCameraRetryKey] = useState<number>(0);
 
   // Booth & frame state
@@ -187,9 +188,6 @@ export const PhotoGuestbookPage: React.FC = () => {
     const blockAccess = () => {
       if (cancelled) return;
       setCameraStatus('error');
-      if (typeof window !== 'undefined') {
-        window.location.replace('/');
-      }
     };
 
     const connect = async () => {
@@ -228,6 +226,7 @@ export const PhotoGuestbookPage: React.FC = () => {
           await video.play().catch(() => { });
         }
         if (!cancelled) {
+          setCameraGranted(true);
           setCameraStatus('ready');
         }
       } catch {
@@ -377,6 +376,7 @@ export const PhotoGuestbookPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (!cameraGranted) return;
     let cancelled = false;
     void fetchGuestbookEntries().then(({ entries: loaded, nextNumber }) => {
       if (!cancelled) {
@@ -405,7 +405,7 @@ export const PhotoGuestbookPage: React.FC = () => {
       cancelled = true;
       window.clearInterval(pollId);
     };
-  }, [archiveOpen]);
+  }, [archiveOpen, cameraGranted]);
 
   const handleSelectFilter = (nextFilter: PhotoFilterId) => {
     setActiveFilter(nextFilter);
@@ -744,7 +744,8 @@ export const PhotoGuestbookPage: React.FC = () => {
         aria-hidden="true"
       />
 
-      {/* Main Photo Booth (stays visible behind archive overlay) */}
+      {/* Main Photo Booth (only rendered after camera permission is granted) */}
+      {cameraGranted && (
       <main className="photo-booth">
         {/* Top-Right Minimal Archive Toggle Button */}
         <button
@@ -989,6 +990,7 @@ export const PhotoGuestbookPage: React.FC = () => {
           </section>
         </div>
       </main>
+      )}
 
       {/* Translucent Archive Overlay over the live Photo Booth background */}
       {archiveOpen && (
