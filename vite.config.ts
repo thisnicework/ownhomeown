@@ -88,6 +88,7 @@ export default defineConfig({
   },
   build: {
     sourcemap: false,
+    cssCodeSplit: false,
     minify: 'oxc',
     rolldownOptions: {
       output: {
