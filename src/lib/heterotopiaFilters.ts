@@ -96,7 +96,7 @@ export class HeterotopiaFilterEngine {
   private scanY = 0;
   private slitscanReset = true;
   private slitscanLastMs = 0;
-  private readonly slitscanSweepSec = 5.2;
+  private readonly slitscanSweepSec = 6.8;
 
   // Face tracking state (normalized to 640x480 reference coordinates)
   private targetFaceX = 320;
