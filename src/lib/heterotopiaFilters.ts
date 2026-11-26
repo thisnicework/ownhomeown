@@ -354,18 +354,6 @@ export class HeterotopiaFilterEngine {
           );
           this.scanY = rawEnd;
         } else {
-          const bottomH = Math.max(1, h - yStart);
-          ctx.drawImage(
-            this.offscreen,
-            0,
-            yStart,
-            w,
-            bottomH,
-            0,
-            yStart,
-            w,
-            bottomH
-          );
           const wrapY = rawEnd % h;
           const topH = Math.ceil(wrapY);
           if (topH > 0) {
@@ -375,8 +363,25 @@ export class HeterotopiaFilterEngine {
         }
       }
 
+      // Below the scan line, always show live real-time camera video
+      const scanLineY = Math.floor(this.scanY);
+      const liveH = h - scanLineY;
+      if (liveH > 0) {
+        ctx.drawImage(
+          this.offscreen,
+          0,
+          scanLineY,
+          w,
+          liveH,
+          0,
+          scanLineY,
+          w,
+          liveH
+        );
+      }
+
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, Math.floor(this.scanY), w, 2);
+      ctx.fillRect(0, scanLineY, w, 2);
     } else if (filter === 'kinetic') {
       const nowMs = performance.now();
       const dtSec =
