@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft,
   Camera,
   Check,
   ExternalLink,
+  Images,
   RefreshCw,
   RotateCcw,
   Share2,
@@ -38,7 +38,6 @@ import {
 import './PhotoGuestbook.css';
 
 type BoothStage = 'capture' | 'compose' | 'done';
-type ActiveTab = 'booth' | 'gallery';
 
 interface CapturedPhoto {
   image: HTMLImageElement;
@@ -83,17 +82,11 @@ const VERSION_POLL_MS = 20_000;
 
 declare const __APP_BUILD_VERSION__: string;
 
-export interface PhotoGuestbookPageProps {
-  mode?: 'booth' | 'archive';
-}
-
-export const PhotoGuestbookPage: React.FC<PhotoGuestbookPageProps> = ({
-  mode = 'booth',
-}) => {
+export const PhotoGuestbookPage: React.FC = () => {
   const integration = useMemo(() => getGuestbookIntegrationConfig(), []);
 
-  const activeTab: ActiveTab = mode === 'archive' ? 'gallery' : 'booth';
   const [stage, setStage] = useState<BoothStage>('capture');
+  const [archiveOpen, setArchiveOpen] = useState<boolean>(false);
 
   // Camera state
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -102,7 +95,6 @@ export const PhotoGuestbookPage: React.FC<PhotoGuestbookPageProps> = ({
   const [cameraStatus, setCameraStatus] = useState<
     'idle' | 'starting' | 'ready' | 'error'
   >('idle');
-  const [cameraError, setCameraError] = useState<string>('');
   const [cameraRetryKey, setCameraRetryKey] = useState<number>(0);
 
   // Booth & frame state
@@ -177,14 +169,22 @@ export const PhotoGuestbookPage: React.FC<PhotoGuestbookPageProps> = ({
     }
   }, []);
 
-  // Start/stop camera automatically when on capture stage
+  // Start/stop camera automatically when on capture stage; redirect away silently if camera permission is denied/unavailable
   useEffect(() => {
-    if (activeTab !== 'booth' || stage !== 'capture') {
+    if (stage !== 'capture') {
       stopCamera();
       return;
     }
 
     let cancelled = false;
+    const blockAccess = () => {
+      if (cancelled) return;
+      setCameraStatus('error');
+      if (typeof window !== 'undefined') {
+        window.location.replace('/');
+      }
+    };
+
     const connect = async () => {
       stopCamera();
       if (
@@ -192,16 +192,12 @@ export const PhotoGuestbookPage: React.FC<PhotoGuestbookPageProps> = ({
         !navigator.mediaDevices ||
         !navigator.mediaDevices.getUserMedia
       ) {
-        if (!cancelled) {
-          setCameraStatus('error');
-          setCameraError('이 브라우저에서는 카메라를 지원하지 않습니다.');
-        }
+        blockAccess();
         return;
       }
 
       if (!cancelled) {
         setCameraStatus('starting');
-        setCameraError('');
       }
 
       try {
@@ -227,14 +223,8 @@ export const PhotoGuestbookPage: React.FC<PhotoGuestbookPageProps> = ({
         if (!cancelled) {
           setCameraStatus('ready');
         }
-      } catch (err) {
-        if (cancelled) return;
-        setCameraStatus('error');
-        const msg =
-          err instanceof DOMException && err.name === 'NotAllowedError'
-            ? '카메라 권한을 허용해 주세요.'
-            : '카메라를 연결할 수 없습니다.';
-        setCameraError(msg);
+      } catch {
+        blockAccess();
       }
     };
 
@@ -244,37 +234,35 @@ export const PhotoGuestbookPage: React.FC<PhotoGuestbookPageProps> = ({
       cancelled = true;
       stopCamera();
     };
-  }, [activeTab, stage, cameraRetryKey, stopCamera]);
+  }, [stage, cameraRetryKey, stopCamera]);
 
   // Auto-focus message textarea immediately when entering compose stage
   useEffect(() => {
-    if (activeTab === 'booth' && stage === 'compose') {
+    if (stage === 'compose') {
       const id = window.setTimeout(() => {
         messageInputRef.current?.focus();
       }, 60);
       return () => window.clearTimeout(id);
     }
-  }, [activeTab, stage]);
+  }, [stage]);
 
-  // Initialize lightweight heterotopia 6-filter engine only on booth tab
+  // Initialize lightweight heterotopia 6-filter engine
   useEffect(() => {
-    if (activeTab !== 'booth') return;
     const engine = new HeterotopiaFilterEngine(642, 428);
     filterEngineRef.current = engine;
     return () => {
       engine.dispose();
       filterEngineRef.current = null;
     };
-  }, [activeTab]);
+  }, []);
 
-  // Auto-reload /photo or /archive when a new deployment goes live (only while idle)
+  // Auto-reload /photo when a new deployment goes live (only while idle)
   const pendingReloadRef = useRef<boolean>(false);
   const isIdleForReload =
-    (activeTab === 'gallery' ||
-      (activeTab === 'booth' &&
-        stage === 'capture' &&
-        countdown === null &&
-        !submitting)) &&
+    stage === 'capture' &&
+    countdown === null &&
+    !submitting &&
+    !archiveOpen &&
     lightboxEntry === null;
   const isIdleForReloadRef = useRef<boolean>(isIdleForReload);
 
@@ -336,7 +324,7 @@ export const PhotoGuestbookPage: React.FC<PhotoGuestbookPageProps> = ({
       }
     });
 
-    if (activeTab !== 'gallery') {
+    if (!archiveOpen) {
       return () => {
         cancelled = true;
       };
@@ -355,7 +343,7 @@ export const PhotoGuestbookPage: React.FC<PhotoGuestbookPageProps> = ({
       cancelled = true;
       window.clearInterval(pollId);
     };
-  }, [activeTab]);
+  }, [archiveOpen]);
 
   const handleSelectFilter = (nextFilter: PhotoFilterId) => {
     setActiveFilter(nextFilter);
@@ -365,7 +353,7 @@ export const PhotoGuestbookPage: React.FC<PhotoGuestbookPageProps> = ({
 
   // Real-time 4:3 preview loop for capture stage
   useEffect(() => {
-    if (activeTab !== 'booth' || stage !== 'capture') return;
+    if (stage !== 'capture') return;
     const canvas = previewCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -410,11 +398,11 @@ export const PhotoGuestbookPage: React.FC<PhotoGuestbookPageProps> = ({
 
     rafId = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(rafId);
-  }, [activeTab, stage, cameraStatus, monoliths, nextOrderNumber, todayLabel]);
+  }, [stage, cameraStatus, monoliths, nextOrderNumber, todayLabel]);
 
   // Keep frame animated in compose & done stages too, and update export canvas once on state change
   useEffect(() => {
-    if (activeTab !== 'booth' || stage === 'capture' || !captured) return;
+    if (stage === 'capture' || !captured) return;
 
     // Paint full-res 1600x1200 export canvas once for crisp download/upload
     const exportCanvas = exportCanvasRef.current;
@@ -466,17 +454,23 @@ export const PhotoGuestbookPage: React.FC<PhotoGuestbookPageProps> = ({
     };
     rafId = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(rafId);
-  }, [activeTab, stage, captured, monoliths, message, nextOrderNumber, todayLabel]);
+  }, [stage, captured, monoliths, message, nextOrderNumber, todayLabel]);
 
-  // Close lightbox on Escape key
+  // Close lightbox or archive overlay on Escape key
   useEffect(() => {
-    if (!lightboxEntry) return;
+    if (!lightboxEntry && !archiveOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setLightboxEntry(null);
+      if (e.key === 'Escape') {
+        if (lightboxEntry) {
+          setLightboxEntry(null);
+        } else if (archiveOpen) {
+          setArchiveOpen(false);
+        }
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [lightboxEntry]);
+  }, [lightboxEntry, archiveOpen]);
 
   // Animate the monolith frame live when viewing any saved card in the lightbox
   useEffect(() => {
@@ -664,8 +658,15 @@ export const PhotoGuestbookPage: React.FC<PhotoGuestbookPageProps> = ({
     setStage('capture');
   };
 
+  // Keep the page hidden until camera permission is granted (no error message if denied)
+  const isBoothReady = stage !== 'capture' || cameraStatus === 'ready';
+
   return (
-    <div className="photo-page">
+    <div
+      className={`photo-page ${archiveOpen ? 'is-archive-open' : ''} ${
+        !isBoothReady ? 'is-camera-pending' : ''
+      }`}
+    >
       {/* Hidden video stream & full-resolution export canvas */}
       <video
         ref={videoRef}
@@ -682,340 +683,340 @@ export const PhotoGuestbookPage: React.FC<PhotoGuestbookPageProps> = ({
         aria-hidden="true"
       />
 
-      {/* Main Content */}
-      {activeTab === 'booth' ? (
-        <main className="photo-booth">
-          {/* Floating Registered Photo Cards Orbiting the Screen Edges */}
+      {/* Main Photo Booth (stays visible behind archive overlay) */}
+      <main className="photo-booth">
+        {/* Top-Right Minimal Archive Toggle Button */}
+        <button
+          type="button"
+          className="photo-archive-trigger"
+          onClick={() => {
+            setArchiveOpen(true);
+            void refreshEntries();
+          }}
+          aria-label="아카이브 열기"
+        >
+          <Images size={14} aria-hidden="true" />
+          <span>ARCHIVE</span>
           {entries.length > 0 && (
-            <aside
-              className="photo-float-layer"
-              aria-label="등록된 포토 방명록"
-            >
-              {entries.slice(0, EDGE_FLOAT_SLOTS.length).map((entry, idx) => {
-                const slot = EDGE_FLOAT_SLOTS[idx];
-                const isNewest = entry.id === newestEntryId;
-                // Older entries (higher idx) progressively shrink & recede slightly in opacity
-                const ageScale = Math.max(0.28, Math.pow(0.9, idx));
-                const ageOpacity = Math.max(0.38, 0.88 - idx * 0.038);
-                const style: React.CSSProperties = {
-                  top: slot.top,
-                  bottom: slot.bottom,
-                  left: slot.left,
-                  right: slot.right,
-                  zIndex: EDGE_FLOAT_SLOTS.length - idx,
-                  '--float-rot': `${slot.rotate}deg`,
-                  '--float-dx': `${slot.driftX}px`,
-                  '--float-dy': `${slot.driftY}px`,
-                  '--float-dur': `${slot.duration}s`,
-                  '--float-delay': `${slot.delay}s`,
-                  '--float-scale': Number(ageScale.toFixed(3)),
-                  '--float-opacity': Number(ageOpacity.toFixed(2)),
-                } as React.CSSProperties;
-
-                return (
-                  <button
-                    key={entry.id}
-                    type="button"
-                    className={`photo-float-card ${isNewest ? 'is-newest' : ''}`}
-                    style={style}
-                    onClick={(e) =>
-                      openLightboxFromElement(entry, e.currentTarget)
-                    }
-                    aria-label="등록된 포토 방명록 보기"
-                  >
-                    <img
-                      src={entry.imageDataUrl}
-                      alt={entry.message || '포토 방명록'}
-                      loading="lazy"
-                    />
-                    <span className="photo-float-card__num">
-                      {formatOrderNumber(entry.orderNumber)}
-                    </span>
-                    {entry.message && (
-                      <span className="photo-float-card__caption">
-                        <em>{entry.message}</em>
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </aside>
+            <span className="photo-archive-trigger__count">
+              {entries.length}
+            </span>
           )}
+        </button>
 
-          {/* Centered Single-Column Booth: 4:3 Card + Shutter Below */}
-          <div className="photo-center-stack">
-            <section
-              className="photo-stage-col"
-              aria-label="1컷 포토 프레임 미리보기"
-            >
-              <div className="photo-frame-shell">
-                <canvas
-                  ref={previewCanvasRef}
-                  width={FRAME_W / 2}
-                  height={FRAME_H / 2}
-                  className="photo-frame-canvas"
-                />
+        {/* Floating Registered Photo Cards Orbiting the Screen Edges */}
+        {entries.length > 0 && (
+          <aside
+            className="photo-float-layer"
+            aria-label="등록된 포토 방명록"
+          >
+            {entries.slice(0, EDGE_FLOAT_SLOTS.length).map((entry, idx) => {
+              const slot = EDGE_FLOAT_SLOTS[idx];
+              const isNewest = entry.id === newestEntryId;
+              // Older entries (higher idx) progressively shrink & recede slightly in opacity
+              const ageScale = Math.max(0.28, Math.pow(0.9, idx));
+              const ageOpacity = Math.max(0.38, 0.88 - idx * 0.038);
+              const style: React.CSSProperties = {
+                top: slot.top,
+                bottom: slot.bottom,
+                left: slot.left,
+                right: slot.right,
+                zIndex: EDGE_FLOAT_SLOTS.length - idx,
+                '--float-rot': `${slot.rotate}deg`,
+                '--float-dx': `${slot.driftX}px`,
+                '--float-dy': `${slot.driftY}px`,
+                '--float-dur': `${slot.duration}s`,
+                '--float-delay': `${slot.delay}s`,
+                '--float-scale': Number(ageScale.toFixed(3)),
+                '--float-opacity': Number(ageOpacity.toFixed(2)),
+              } as React.CSSProperties;
 
-                {/* Fixed 3-second countdown overlay */}
-                {countdown !== null && countdown > 0 && (
-                  <div className="photo-countdown" aria-live="assertive">
-                    <span>{countdown}</span>
+              return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  className={`photo-float-card ${isNewest ? 'is-newest' : ''}`}
+                  style={style}
+                  onClick={(e) =>
+                    openLightboxFromElement(entry, e.currentTarget)
+                  }
+                  aria-label="등록된 포토 방명록 보기"
+                >
+                  <img
+                    src={entry.imageDataUrl}
+                    alt={entry.message || '포토 방명록'}
+                    loading="lazy"
+                  />
+                  <span className="photo-float-card__num">
+                    {formatOrderNumber(entry.orderNumber)}
+                  </span>
+                  {entry.message && (
+                    <span className="photo-float-card__caption">
+                      <em>{entry.message}</em>
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </aside>
+        )}
+
+        {/* Centered Single-Column Booth: 4:3 Card + Shutter Below */}
+        <div className="photo-center-stack">
+          <section
+            className="photo-stage-col"
+            aria-label="1컷 포토 프레임 미리보기"
+          >
+            <div className="photo-frame-shell">
+              <canvas
+                ref={previewCanvasRef}
+                width={FRAME_W / 2}
+                height={FRAME_H / 2}
+                className="photo-frame-canvas"
+              />
+
+              {/* Fixed 3-second countdown overlay */}
+              {countdown !== null && countdown > 0 && (
+                <div className="photo-countdown" aria-live="assertive">
+                  <span>{countdown}</span>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Controls directly beneath the 4:3 card */}
+          <section
+            className="photo-controls-col"
+            aria-label="촬영 및 방명록 작성"
+          >
+            {stage === 'capture' && (
+              <div className="photo-capture-bar">
+                <button
+                  type="button"
+                  className="photo-shutter-btn"
+                  onClick={handleShutterClick}
+                  disabled={countdown !== null}
+                  aria-label="3초 타이머 촬영"
+                >
+                  <span className="photo-shutter-btn__inner">
+                    {countdown !== null ? countdown : null}
+                  </span>
+                </button>
+
+                <div
+                  className="photo-filter-bar"
+                  role="radiogroup"
+                  aria-label="카메라 필터 선택"
+                >
+                  {PHOTO_FILTERS.map((filterId, idx) => (
+                    <React.Fragment key={filterId}>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={activeFilter === filterId}
+                        className={`photo-filter-opt ${
+                          activeFilter === filterId ? 'is-active' : ''
+                        }`}
+                        onClick={() => handleSelectFilter(filterId)}
+                      >
+                        {filterId}
+                      </button>
+                      {idx < PHOTO_FILTERS.length - 1 && (
+                        <span className="photo-filter-sep" aria-hidden="true">
+                          /
+                        </span>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {stage === 'compose' && (
+              <form
+                className="photo-panel photo-panel--compose"
+                onSubmit={handleSubmitGuestbook}
+              >
+                <div className="photo-field">
+                  <div className="photo-field__label-row">
+                    <label htmlFor="guestbook-message" className="photo-label">
+                      방명록 한마디
+                    </label>
+                    <span className="photo-counter">
+                      {message.length} / 120
+                    </span>
                   </div>
+                  <textarea
+                    ref={messageInputRef}
+                    id="guestbook-message"
+                    className="photo-textarea"
+                    rows={2}
+                    maxLength={120}
+                    placeholder="전시를 보며 떠오른 생각이나 한마디를 남겨주세요."
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                  />
+                </div>
+
+                <div className="photo-action-row">
+                  <button
+                    type="button"
+                    className="photo-btn photo-btn--ghost"
+                    onClick={handleRetake}
+                  >
+                    <RotateCcw size={15} aria-hidden="true" />
+                    <span>다시 찍기</span>
+                  </button>
+                  <button
+                    type="submit"
+                    className="photo-btn photo-btn--primary"
+                    disabled={submitting}
+                  >
+                    <Check size={16} aria-hidden="true" />
+                    <span>{submitting ? '등록 중…' : '방명록 등록하기'}</span>
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {stage === 'done' && (
+              <div className="photo-panel photo-panel--done">
+                <div className="photo-done-head">
+                  <span className="photo-kicker photo-kicker--done">
+                    <Check size={13} aria-hidden="true" />
+                    {lastSubmitSynced
+                      ? 'GUESTBOOK SYNCED'
+                      : '방명록에 등록되었습니다'}
+                  </span>
+                </div>
+
+                <div className="photo-action-row">
+                  <button
+                    type="button"
+                    className="photo-btn photo-btn--primary"
+                    onClick={handleResetAll}
+                  >
+                    <Camera size={15} aria-hidden="true" />
+                    <span>한 장 더 찍기</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="photo-btn photo-btn--secondary"
+                    onClick={() => void handleShare()}
+                  >
+                    <Share2 size={15} aria-hidden="true" />
+                    <span>공유하기</span>
+                  </button>
+                </div>
+
+                {integration.returnUrl && (
+                  <a
+                    href={integration.returnUrl}
+                    className="photo-btn photo-btn--secondary"
+                  >
+                    <ExternalLink size={15} aria-hidden="true" />
+                    <span>방명록 사이트로 돌아가기</span>
+                  </a>
                 )}
 
-                {/* Camera error notice */}
-                {stage === 'capture' && cameraStatus === 'error' && (
-                  <div className="photo-camera-fallback">
-                    <p className="photo-camera-fallback__title">
-                      CAMERA UNAVAILABLE
-                    </p>
-                    <p className="photo-camera-fallback__desc">
-                      {cameraError}
-                    </p>
-                    <button
-                      type="button"
-                      className="photo-btn photo-btn--ghost photo-btn--compact"
-                      onClick={() => setCameraRetryKey((k) => k + 1)}
-                    >
-                      <RefreshCw size={14} aria-hidden="true" />
-                      <span>다시 연결</span>
-                    </button>
-                  </div>
+                {shareFeedback && (
+                  <p className="photo-toast" role="status">
+                    {shareFeedback}
+                  </p>
                 )}
               </div>
-            </section>
+            )}
+          </section>
+        </div>
+      </main>
 
-            {/* Controls directly beneath the 4:3 card */}
-            <section
-              className="photo-controls-col"
-              aria-label="촬영 및 방명록 작성"
-            >
-              {stage === 'capture' && (
-                <div className="photo-capture-bar">
-                  <button
-                    type="button"
-                    className="photo-shutter-btn"
-                    onClick={handleShutterClick}
-                    disabled={countdown !== null}
-                    aria-label="3초 타이머 촬영"
-                  >
-                    <span className="photo-shutter-btn__inner">
-                      {countdown !== null ? countdown : null}
-                    </span>
-                  </button>
-
-                  <div
-                    className="photo-filter-bar"
-                    role="radiogroup"
-                    aria-label="카메라 필터 선택"
-                  >
-                    {PHOTO_FILTERS.map((filterId, idx) => (
-                      <React.Fragment key={filterId}>
-                        <button
-                          type="button"
-                          role="radio"
-                          aria-checked={activeFilter === filterId}
-                          className={`photo-filter-opt ${activeFilter === filterId ? 'is-active' : ''
-                            }`}
-                          onClick={() => handleSelectFilter(filterId)}
-                        >
-                          {filterId}
-                        </button>
-                        {idx < PHOTO_FILTERS.length - 1 && (
-                          <span className="photo-filter-sep" aria-hidden="true">
-                            /
-                          </span>
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {stage === 'compose' && (
-                <form
-                  className="photo-panel photo-panel--compose"
-                  onSubmit={handleSubmitGuestbook}
+      {/* Translucent Archive Overlay over the live Photo Booth background */}
+      {archiveOpen && (
+        <div
+          className="photo-archive-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="포토 방명록 아카이브"
+          onClick={() => setArchiveOpen(false)}
+        >
+          <div
+            className="photo-gallery-view photo-archive-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="photo-gallery-head">
+              <div>
+                <span className="photo-kicker">
+                  OWNHOMEOWN.COM / ARCHIVE · {entries.length} CUTS
+                </span>
+                <h1 className="photo-title">포토 방명록 아카이브</h1>
+              </div>
+              <div className="photo-gallery-head__actions">
+                <button
+                  type="button"
+                  className="photo-btn photo-btn--ghost photo-btn--compact"
+                  onClick={() => void refreshEntries()}
+                  aria-label="새로고침"
                 >
-                  <div className="photo-field">
-                    <div className="photo-field__label-row">
-                      <label htmlFor="guestbook-message" className="photo-label">
-                        방명록 한마디
-                      </label>
-                      <span className="photo-counter">
-                        {message.length} / 120
-                      </span>
+                  <RefreshCw size={14} aria-hidden="true" />
+                  <span>새로고침</span>
+                </button>
+                <button
+                  type="button"
+                  className="photo-btn photo-btn--primary photo-btn--compact"
+                  onClick={() => setArchiveOpen(false)}
+                  aria-label="아카이브 닫기"
+                >
+                  <X size={15} aria-hidden="true" />
+                  <span>닫기</span>
+                </button>
+              </div>
+            </div>
+
+            {entries.length === 0 ? (
+              <div className="photo-empty">
+                <p>
+                  {loadingEntries
+                    ? '포토 방명록을 불러오는 중입니다…'
+                    : '아직 등록된 포토 방명록이 없습니다.'}
+                </p>
+              </div>
+            ) : (
+              <div className="photo-gallery-grid">
+                {entries.map((entry) => (
+                  <article key={entry.id} className="photo-card">
+                    <button
+                      type="button"
+                      className="photo-card__media"
+                      onClick={(e) =>
+                        openLightboxFromElement(entry, e.currentTarget)
+                      }
+                      aria-label="포토 방명록 크게 보기"
+                    >
+                      <img
+                        src={entry.imageDataUrl}
+                        alt={entry.message || '포토 방명록'}
+                        loading="lazy"
+                      />
+                    </button>
+                    <div className="photo-card__meta">
+                      <div className="photo-card__row">
+                        <span className="photo-card__num">
+                          {formatOrderNumber(entry.orderNumber)}
+                        </span>
+                        <span className="photo-card__date">
+                          {formatKoreaDate(entry.createdAt)}
+                        </span>
+                      </div>
+                      {entry.message && (
+                        <p className="photo-card__msg">{entry.message}</p>
+                      )}
                     </div>
-                    <textarea
-                      ref={messageInputRef}
-                      id="guestbook-message"
-                      className="photo-textarea"
-                      rows={2}
-                      maxLength={120}
-                      placeholder="전시를 보며 떠오른 생각이나 한마디를 남겨주세요."
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="photo-action-row">
-                    <button
-                      type="button"
-                      className="photo-btn photo-btn--ghost"
-                      onClick={handleRetake}
-                    >
-                      <RotateCcw size={15} aria-hidden="true" />
-                      <span>다시 찍기</span>
-                    </button>
-                    <button
-                      type="submit"
-                      className="photo-btn photo-btn--primary"
-                      disabled={submitting}
-                    >
-                      <Check size={16} aria-hidden="true" />
-                      <span>{submitting ? '등록 중…' : '방명록 등록하기'}</span>
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {stage === 'done' && (
-                <div className="photo-panel photo-panel--done">
-                  <div className="photo-done-head">
-                    <span className="photo-kicker photo-kicker--done">
-                      <Check size={13} aria-hidden="true" />
-                      {lastSubmitSynced
-                        ? 'GUESTBOOK SYNCED'
-                        : '방명록에 등록되었습니다'}
-                    </span>
-                  </div>
-
-                  <div className="photo-action-row">
-                    <button
-                      type="button"
-                      className="photo-btn photo-btn--primary"
-                      onClick={handleResetAll}
-                    >
-                      <Camera size={15} aria-hidden="true" />
-                      <span>한 장 더 찍기</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="photo-btn photo-btn--secondary"
-                      onClick={() => void handleShare()}
-                    >
-                      <Share2 size={15} aria-hidden="true" />
-                      <span>공유하기</span>
-                    </button>
-                  </div>
-
-                  {integration.returnUrl && (
-                    <a
-                      href={integration.returnUrl}
-                      className="photo-btn photo-btn--secondary"
-                    >
-                      <ExternalLink size={15} aria-hidden="true" />
-                      <span>방명록 사이트로 돌아가기</span>
-                    </a>
-                  )}
-
-                  {shareFeedback && (
-                    <p className="photo-toast" role="status">
-                      {shareFeedback}
-                    </p>
-                  )}
-                </div>
-              )}
-            </section>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
-        </main>
-      ) : (
-        /* Guestbook Wall Archive (/archive) */
-        <main className="photo-gallery-view">
-          <div className="photo-gallery-head">
-            <div>
-              <span className="photo-kicker">
-                OWNHOMEOWN.COM / ARCHIVE · {entries.length} CUTS
-              </span>
-              <h1 className="photo-title">포토 방명록 아카이브</h1>
-            </div>
-            <div className="photo-gallery-head__actions">
-              <button
-                type="button"
-                className="photo-btn photo-btn--ghost photo-btn--compact"
-                onClick={() => void refreshEntries()}
-                aria-label="새로고침"
-              >
-                <RefreshCw size={14} aria-hidden="true" />
-                <span>새로고침</span>
-              </button>
-              <a
-                href="/photo"
-                className="photo-btn photo-btn--primary photo-btn--compact"
-              >
-                <Camera size={15} aria-hidden="true" />
-                <span>촬영 부스 (/photo)</span>
-              </a>
-            </div>
-          </div>
-
-          {entries.length === 0 ? (
-            <div className="photo-empty">
-              <p>
-                {loadingEntries
-                  ? '포토 방명록을 불러오는 중입니다…'
-                  : '아직 등록된 포토 방명록이 없습니다.'}
-              </p>
-              {!loadingEntries && (
-                <a href="/photo" className="photo-btn photo-btn--primary">
-                  <Camera size={16} aria-hidden="true" />
-                  <span>첫 번째 1컷 남기기</span>
-                </a>
-              )}
-            </div>
-          ) : (
-            <div className="photo-gallery-grid">
-              {entries.map((entry) => (
-                <article key={entry.id} className="photo-card">
-                  <button
-                    type="button"
-                    className="photo-card__media"
-                    onClick={(e) =>
-                      openLightboxFromElement(entry, e.currentTarget)
-                    }
-                    aria-label="포토 방명록 크게 보기"
-                  >
-                    <img
-                      src={entry.imageDataUrl}
-                      alt={entry.message || '포토 방명록'}
-                      loading="lazy"
-                    />
-                  </button>
-                  <div className="photo-card__meta">
-                    <div className="photo-card__row">
-                      <span className="photo-card__num">
-                        {formatOrderNumber(entry.orderNumber)}
-                      </span>
-                      <span className="photo-card__date">
-                        {formatKoreaDate(entry.createdAt)}
-                      </span>
-                    </div>
-                    {entry.message && (
-                      <p className="photo-card__msg">{entry.message}</p>
-                    )}
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-
-          <div className="photo-gallery-footer">
-            <a href="/" className="photo-back-link">
-              <ArrowLeft size={14} aria-hidden="true" />
-              <span>⟪공과 주⟫ 전시 메인으로 돌아가기</span>
-            </a>
-          </div>
-        </main>
+        </div>
       )}
 
       {/* Full-viewport physical screen-fill light for illuminating subject during capture */}

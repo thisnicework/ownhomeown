@@ -9,41 +9,33 @@ import { VisitAndSponsors } from './components/VisitAndSponsors';
 import { PhotoGuestbookPage } from './components/PhotoGuestbookPage';
 import './App.css';
 
-type SpecialRoute = 'main' | 'photo' | 'archive';
-
-function getSpecialRoute(): SpecialRoute {
-  if (typeof window === 'undefined') return 'main';
+function isPhotoRoute(): boolean {
+  if (typeof window === 'undefined') return false;
   const normalized = window.location.pathname.replace(/\/+$/, '') || '/';
-  if (normalized === '/photo') return 'photo';
-  if (normalized === '/archive') return 'archive';
-  return 'main';
+  return normalized === '/photo' || normalized === '/archive';
 }
 
 export function App() {
-  const [route, setRoute] = useState<SpecialRoute>(() => getSpecialRoute());
+  const [onPhotoPage, setOnPhotoPage] = useState<boolean>(() => isPhotoRoute());
   const [activeSectionId, setActiveSectionId] = useState<string>('overview');
 
   useEffect(() => {
-    const syncRoute = () => setRoute(getSpecialRoute());
+    const syncRoute = () => setOnPhotoPage(isPhotoRoute());
     window.addEventListener('popstate', syncRoute);
     return () => window.removeEventListener('popstate', syncRoute);
   }, []);
 
   useEffect(() => {
-    if (route === 'photo') {
+    if (onPhotoPage) {
       document.title = '포토 방명록 | ⟪공과 주⟫ 공共과 주主';
-      return;
-    }
-    if (route === 'archive') {
-      document.title = '포토 아카이브 | ⟪공과 주⟫ 공共과 주主';
       return;
     }
     document.title =
       '⟪공과 주⟫ 공共과 주主 | 서울예술대학교 학사학위 전공심화과정 독립창작프로젝트';
-  }, [route]);
+  }, [onPhotoPage]);
 
   useEffect(() => {
-    if (route !== 'main') return;
+    if (onPhotoPage) return;
     const ids = NAV_ITEMS.map((item) => item.id);
     const elements = ids
       .map((id) => document.getElementById(id))
@@ -68,14 +60,10 @@ export function App() {
 
     elements.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [route]);
+  }, [onPhotoPage]);
 
-  if (route === 'photo') {
-    return <PhotoGuestbookPage mode="booth" />;
-  }
-
-  if (route === 'archive') {
-    return <PhotoGuestbookPage mode="archive" />;
+  if (onPhotoPage) {
+    return <PhotoGuestbookPage />;
   }
 
   return (

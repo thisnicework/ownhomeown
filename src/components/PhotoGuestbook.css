@@ -103,6 +103,11 @@
 }
 
 /* Main Booth Layout — Centered Single Column (Card on Top, Controls Directly Below) */
+.photo-page.is-camera-pending .photo-booth {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .photo-booth {
   position: relative;
   flex: 1;
@@ -112,6 +117,45 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: opacity 0.25s ease, filter 0.35s ease;
+}
+
+.photo-page.is-archive-open .photo-booth {
+  filter: blur(8px) brightness(0.62);
+}
+
+.photo-archive-trigger {
+  position: fixed;
+  top: 1.15rem;
+  right: 1.25rem;
+  z-index: 35;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 36px;
+  padding: 0 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.88);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+
+.photo-archive-trigger:hover {
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.photo-archive-trigger__count {
+  padding-left: 0.45rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .photo-center-stack {
@@ -975,7 +1019,33 @@
   text-align: center;
 }
 
-/* Guestbook Gallery Archive (/archive) */
+/* Translucent Archive Overlay over live /photo booth background */
+.photo-archive-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: photoArchiveFadeIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes photoArchiveFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.photo-archive-sheet {
+  min-height: 100%;
+}
+
+/* Guestbook Gallery Archive (/photo integrated overlay) */
 .photo-gallery-view {
   flex: 1;
   width: 100%;
