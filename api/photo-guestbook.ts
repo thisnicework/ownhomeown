@@ -12,7 +12,17 @@ interface StoredGuestbookEntry {
 
 const ENTRY_PREFIX = 'photo-guestbook/entries/';
 const IMAGE_PREFIX = 'photo-guestbook/images/';
+const INDEX_PATHNAME = 'photo-guestbook/index-v1.json';
 const MAX_ENTRIES_RETURNED = 500;
+
+interface StoredGuestbookIndex {
+  entries: StoredGuestbookEntry[];
+  nextNumber: number;
+  updatedAt: string;
+}
+
+let memoryIndexCache: StoredGuestbookIndex | null = null;
+let storeAccessMode: 'unknown' | 'private' | 'public' = 'unknown';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -36,6 +46,16 @@ async function putAutoAccess(
   body: Buffer | string,
   contentType: string
 ): Promise<{ url: string; pathname: string; access: 'public' | 'private' }> {
+  if (storeAccessMode === 'private') {
+    const blob = await put(pathname, body, {
+      access: 'private',
+      contentType,
+      addRandomSuffix: false,
+      allowOverwrite: true,
+    });
+    return { url: blob.url, pathname: blob.pathname, access: 'private' };
+  }
+
   try {
     const blob = await put(pathname, body, {
       access: 'public',
@@ -43,10 +63,12 @@ async function putAutoAccess(
       addRandomSuffix: false,
       allowOverwrite: true,
     });
+    storeAccessMode = 'public';
     return { url: blob.url, pathname: blob.pathname, access: 'public' };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (/private/i.test(msg) || /access/i.test(msg)) {
+      storeAccessMode = 'private';
       const blob = await put(pathname, body, {
         access: 'private',
         contentType,
@@ -59,30 +81,124 @@ async function putAutoAccess(
   }
 }
 
-/** Reads a JSON blob from either a public or private Vercel Blob store */
-async function readJsonBlob(
+/** Reads a JSON blob from either a private or public Vercel Blob store in a single hop */
+async function readJsonBlob<T = Partial<StoredGuestbookEntry>>(
   url: string,
   pathname: string
-): Promise<Partial<StoredGuestbookEntry> | null> {
-  try {
-    const res = await fetch(url);
-    if (res.ok) {
-      return (await res.json()) as Partial<StoredGuestbookEntry>;
+): Promise<T | null> {
+  // 1. Try authenticated get() first (1 hop, works directly on private stores without 403 retry)
+  if (storeAccessMode !== 'public') {
+    try {
+      const result = await get(pathname, { access: 'private' });
+      if (result && result.statusCode === 200 && result.stream) {
+        storeAccessMode = 'private';
+        const text = await new Response(result.stream).text();
+        return JSON.parse(text) as T;
+      }
+    } catch {
+      // Fall through to public fetch if store is public
     }
-  } catch {
-    // Fall through to private get()
   }
 
-  try {
-    const result = await get(pathname, { access: 'private' });
-    if (result && result.statusCode === 200 && result.stream) {
-      const text = await new Response(result.stream).text();
-      return JSON.parse(text) as Partial<StoredGuestbookEntry>;
+  // 2. Fallback to public URL fetch
+  if (url) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        storeAccessMode = 'public';
+        return (await res.json()) as T;
+      }
+    } catch {
+      return null;
     }
-  } catch {
-    return null;
   }
   return null;
+}
+
+/** Reads or rebuilds the single manifest index so GET takes 1 blob read instead of N+1 */
+async function getOrBuildGuestbookIndex(): Promise<StoredGuestbookIndex> {
+  if (memoryIndexCache) {
+    return memoryIndexCache;
+  }
+
+  // Try reading the single manifest index blob first
+  const existingIndex = await readJsonBlob<StoredGuestbookIndex>(
+    '',
+    INDEX_PATHNAME
+  );
+  if (
+    existingIndex &&
+    Array.isArray(existingIndex.entries) &&
+    typeof existingIndex.nextNumber === 'number'
+  ) {
+    memoryIndexCache = existingIndex;
+    return existingIndex;
+  }
+
+  // Build index once from individual entry blobs and persist it for future O(1) reads
+  const { blobs } = await list({
+    prefix: ENTRY_PREFIX,
+    limit: MAX_ENTRIES_RETURNED,
+  });
+
+  const sortedBlobs = [...blobs].sort(
+    (a, b) =>
+      new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+  );
+
+  const fetched = await Promise.all(
+    sortedBlobs.map(
+      async (blob): Promise<Partial<StoredGuestbookEntry> | null> => {
+        const data = await readJsonBlob<Partial<StoredGuestbookEntry>>(
+          blob.url,
+          blob.pathname
+        );
+        if (!data || !data.id || !data.imageUrl || !data.createdAt) return null;
+        return data;
+      }
+    )
+  );
+
+  const chronological = fetched
+    .filter((item): item is Partial<StoredGuestbookEntry> => item !== null)
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt || 0).getTime() -
+        new Date(b.createdAt || 0).getTime()
+    );
+
+  let maxNum = 0;
+  const numbered: StoredGuestbookEntry[] = chronological.map((data, idx) => {
+    const assigned =
+      typeof data.orderNumber === 'number' && data.orderNumber > 0
+        ? Math.floor(data.orderNumber)
+        : idx + 1;
+    if (assigned > maxNum) maxNum = assigned;
+    return {
+      id: data.id!,
+      orderNumber: assigned,
+      imageUrl: data.imageUrl!,
+      imagePathname: data.imagePathname,
+      message: typeof data.message === 'string' ? data.message : '',
+      filter: typeof data.filter === 'string' ? data.filter : 'kinetic',
+      createdAt: data.createdAt!,
+    };
+  });
+
+  const built: StoredGuestbookIndex = {
+    entries: numbered.reverse(),
+    nextNumber: maxNum + 1,
+    updatedAt: new Date().toISOString(),
+  };
+
+  memoryIndexCache = built;
+  void putAutoAccess(
+    INDEX_PATHNAME,
+    JSON.stringify(built),
+    'application/json; charset=utf-8'
+  ).catch(() => {});
+
+  return built;
 }
 
 /**
@@ -125,54 +241,11 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   try {
-    const { blobs } = await list({
-      prefix: ENTRY_PREFIX,
-      limit: MAX_ENTRIES_RETURNED,
-    });
-
-    const sortedBlobs = [...blobs].sort(
-      (a, b) =>
-        new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+    const index = await getOrBuildGuestbookIndex();
+    return jsonResponse(
+      { entries: index.entries, nextNumber: index.nextNumber },
+      200
     );
-
-    const fetched = await Promise.all(
-      sortedBlobs.map(async (blob): Promise<Partial<StoredGuestbookEntry> | null> => {
-        const data = await readJsonBlob(blob.url, blob.pathname);
-        if (!data || !data.id || !data.imageUrl || !data.createdAt) return null;
-        return data;
-      })
-    );
-
-    // Sort oldest -> newest to assign stable sequential orderNumbers for any legacy entries
-    const chronological = fetched
-      .filter((item): item is Partial<StoredGuestbookEntry> => item !== null)
-      .sort(
-        (a, b) =>
-          new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
-      );
-
-    let maxNum = 0;
-    const numbered: StoredGuestbookEntry[] = chronological.map((data, idx) => {
-      const assigned =
-        typeof data.orderNumber === 'number' && data.orderNumber > 0
-          ? Math.floor(data.orderNumber)
-          : idx + 1;
-      if (assigned > maxNum) maxNum = assigned;
-      return {
-        id: data.id!,
-        orderNumber: assigned,
-        imageUrl: data.imageUrl!,
-        imagePathname: data.imagePathname,
-        message: typeof data.message === 'string' ? data.message : '',
-        filter: typeof data.filter === 'string' ? data.filter : 'kinetic',
-        createdAt: data.createdAt!,
-      };
-    });
-
-    const entries = numbered.reverse(); // newest first
-    const nextNumber = maxNum + 1;
-
-    return jsonResponse({ entries, nextNumber }, 200);
   } catch (err) {
     console.error('[api/photo-guestbook GET] failed:', err);
     return jsonResponse({ error: 'FAILED_TO_LIST', entries: [] }, 500);
@@ -242,11 +315,8 @@ export async function POST(request: Request): Promise<Response> {
         : 0;
 
     if (orderNumber === 0) {
-      const { blobs: existingBlobs } = await list({
-        prefix: ENTRY_PREFIX,
-        limit: 1000,
-      });
-      orderNumber = existingBlobs.length + 1;
+      const currentIndex = await getOrBuildGuestbookIndex();
+      orderNumber = currentIndex.nextNumber;
     }
 
     // 1. Upload image binary to Vercel Blob (auto-handles public or private store)
@@ -272,11 +342,30 @@ export async function POST(request: Request): Promise<Response> {
       createdAt,
     };
 
-    await putAutoAccess(
-      `${ENTRY_PREFIX}${rawId}.json`,
-      JSON.stringify(entry),
-      'application/json; charset=utf-8'
-    );
+    const currentIndex = await getOrBuildGuestbookIndex();
+    const updatedEntries = [
+      entry,
+      ...currentIndex.entries.filter((e) => e.id !== entry.id),
+    ].slice(0, MAX_ENTRIES_RETURNED);
+    const updatedIndex: StoredGuestbookIndex = {
+      entries: updatedEntries,
+      nextNumber: Math.max(currentIndex.nextNumber, entry.orderNumber + 1),
+      updatedAt: new Date().toISOString(),
+    };
+    memoryIndexCache = updatedIndex;
+
+    await Promise.all([
+      putAutoAccess(
+        `${ENTRY_PREFIX}${rawId}.json`,
+        JSON.stringify(entry),
+        'application/json; charset=utf-8'
+      ),
+      putAutoAccess(
+        INDEX_PATHNAME,
+        JSON.stringify(updatedIndex),
+        'application/json; charset=utf-8'
+      ),
+    ]);
 
     return jsonResponse({ entry }, 201);
   } catch (err) {
@@ -315,6 +404,19 @@ export async function DELETE(request: Request): Promise<Response> {
 
     if (targets.length > 0) {
       await del(targets);
+    }
+
+    if (memoryIndexCache) {
+      memoryIndexCache = {
+        ...memoryIndexCache,
+        entries: memoryIndexCache.entries.filter((e) => e.id !== id),
+        updatedAt: new Date().toISOString(),
+      };
+      await putAutoAccess(
+        INDEX_PATHNAME,
+        JSON.stringify(memoryIndexCache),
+        'application/json; charset=utf-8'
+      ).catch(() => {});
     }
 
     return jsonResponse({ deleted: true, id }, 200);

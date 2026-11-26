@@ -174,6 +174,9 @@ export async function fetchGuestbookEntries(): Promise<{
     const merged = [...remote, ...localOnly].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
+    // Cache latest merged remote entries in localStorage for instant 0ms initial paint on /archive & /photo
+    saveLocalGuestbookEntries(merged);
+
     const maxOrder = merged.reduce((m, e) => Math.max(m, e.orderNumber || 0), 0);
     const nextNumber = Math.max(data.nextNumber || 1, maxOrder + 1);
     return { entries: merged, nextNumber };
