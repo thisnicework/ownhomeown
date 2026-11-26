@@ -9,33 +9,41 @@ import { VisitAndSponsors } from './components/VisitAndSponsors';
 import { PhotoGuestbookPage } from './components/PhotoGuestbookPage';
 import './App.css';
 
-function isPhotoRoute(): boolean {
-  if (typeof window === 'undefined') return false;
+type SpecialRoute = 'main' | 'photo' | 'archive';
+
+function getSpecialRoute(): SpecialRoute {
+  if (typeof window === 'undefined') return 'main';
   const normalized = window.location.pathname.replace(/\/+$/, '') || '/';
-  return normalized === '/photo';
+  if (normalized === '/photo') return 'photo';
+  if (normalized === '/archive') return 'archive';
+  return 'main';
 }
 
 export function App() {
-  const [onPhotoPage, setOnPhotoPage] = useState<boolean>(() => isPhotoRoute());
+  const [route, setRoute] = useState<SpecialRoute>(() => getSpecialRoute());
   const [activeSectionId, setActiveSectionId] = useState<string>('overview');
 
   useEffect(() => {
-    const syncRoute = () => setOnPhotoPage(isPhotoRoute());
+    const syncRoute = () => setRoute(getSpecialRoute());
     window.addEventListener('popstate', syncRoute);
     return () => window.removeEventListener('popstate', syncRoute);
   }, []);
 
   useEffect(() => {
-    if (onPhotoPage) {
+    if (route === 'photo') {
       document.title = '포토 방명록 | ⟪공과 주⟫ 공共과 주主';
+      return;
+    }
+    if (route === 'archive') {
+      document.title = '포토 아카이브 | ⟪공과 주⟫ 공共과 주主';
       return;
     }
     document.title =
       '⟪공과 주⟫ 공共과 주主 | 서울예술대학교 학사학위 전공심화과정 독립창작프로젝트';
-  }, [onPhotoPage]);
+  }, [route]);
 
   useEffect(() => {
-    if (onPhotoPage) return;
+    if (route !== 'main') return;
     const ids = NAV_ITEMS.map((item) => item.id);
     const elements = ids
       .map((id) => document.getElementById(id))
@@ -60,10 +68,14 @@ export function App() {
 
     elements.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [onPhotoPage]);
+  }, [route]);
 
-  if (onPhotoPage) {
-    return <PhotoGuestbookPage />;
+  if (route === 'photo') {
+    return <PhotoGuestbookPage mode="booth" />;
+  }
+
+  if (route === 'archive') {
+    return <PhotoGuestbookPage mode="archive" />;
   }
 
   return (

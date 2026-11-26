@@ -12,7 +12,7 @@ interface StoredGuestbookEntry {
 
 const ENTRY_PREFIX = 'photo-guestbook/entries/';
 const IMAGE_PREFIX = 'photo-guestbook/images/';
-const MAX_ENTRIES_RETURNED = 48;
+const MAX_ENTRIES_RETURNED = 500;
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

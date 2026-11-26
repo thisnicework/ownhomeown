@@ -975,11 +975,11 @@
   text-align: center;
 }
 
-/* Guestbook Gallery Archive */
+/* Guestbook Gallery Archive (/archive) */
 .photo-gallery-view {
   flex: 1;
   width: 100%;
-  max-width: 1080px;
+  max-width: 1240px;
   margin: 0 auto;
   padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 3vw, 2rem) 4rem;
   display: flex;
@@ -989,11 +989,18 @@
 
 .photo-gallery-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
   padding-bottom: 1.25rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.photo-gallery-head__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
 }
 
 .photo-empty {
@@ -1009,7 +1016,7 @@
 
 .photo-gallery-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
   gap: 1.25rem;
 }
 

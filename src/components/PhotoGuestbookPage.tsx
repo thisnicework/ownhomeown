@@ -83,11 +83,23 @@ const VERSION_POLL_MS = 20_000;
 
 declare const __APP_BUILD_VERSION__: string;
 
-export const PhotoGuestbookPage: React.FC = () => {
+export interface PhotoGuestbookPageProps {
+  mode?: 'booth' | 'archive';
+}
+
+export const PhotoGuestbookPage: React.FC<PhotoGuestbookPageProps> = ({
+  mode = 'booth',
+}) => {
   const integration = useMemo(() => getGuestbookIntegrationConfig(), []);
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>('booth');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(
+    mode === 'archive' ? 'gallery' : 'booth'
+  );
   const [stage, setStage] = useState<BoothStage>('capture');
+
+  useEffect(() => {
+    setActiveTab(mode === 'archive' ? 'gallery' : 'booth');
+  }, [mode]);
 
   // Camera state
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -250,23 +262,25 @@ export const PhotoGuestbookPage: React.FC = () => {
     }
   }, [activeTab, stage]);
 
-  // Initialize lightweight heterotopia 6-filter engine (FaceMesh lazy-loads only on tunnel/dizzy)
+  // Initialize lightweight heterotopia 6-filter engine only on booth tab
   useEffect(() => {
+    if (activeTab !== 'booth') return;
     const engine = new HeterotopiaFilterEngine(642, 428);
     filterEngineRef.current = engine;
     return () => {
       engine.dispose();
       filterEngineRef.current = null;
     };
-  }, []);
+  }, [activeTab]);
 
-  // Auto-reload /photo when a new deployment goes live (only while idle)
+  // Auto-reload /photo or /archive when a new deployment goes live (only while idle)
   const pendingReloadRef = useRef<boolean>(false);
   const isIdleForReload =
-    activeTab === 'booth' &&
-    stage === 'capture' &&
-    countdown === null &&
-    !submitting &&
+    (activeTab === 'gallery' ||
+      (activeTab === 'booth' &&
+        stage === 'capture' &&
+        countdown === null &&
+        !submitting)) &&
     lightboxEntry === null;
   const isIdleForReloadRef = useRef<boolean>(isIdleForReload);
 
@@ -309,19 +323,45 @@ export const PhotoGuestbookPage: React.FC = () => {
     return () => window.clearInterval(id);
   }, []);
 
-  // Load persisted photo guestbook entries from Vercel Blob on mount
+  // Load persisted photo guestbook entries from Vercel Blob on mount (+ live poll on /archive)
+  const [loadingEntries, setLoadingEntries] = useState<boolean>(true);
+  const refreshEntries = useCallback(async () => {
+    const { entries: loaded, nextNumber } = await fetchGuestbookEntries();
+    setEntries(loaded);
+    setNextOrderNumber(nextNumber);
+    setLoadingEntries(false);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     void fetchGuestbookEntries().then(({ entries: loaded, nextNumber }) => {
       if (!cancelled) {
         setEntries(loaded);
         setNextOrderNumber(nextNumber);
+        setLoadingEntries(false);
       }
     });
+
+    if (activeTab !== 'gallery') {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const pollId = window.setInterval(() => {
+      void fetchGuestbookEntries().then(({ entries: loaded, nextNumber }) => {
+        if (!cancelled) {
+          setEntries(loaded);
+          setNextOrderNumber(nextNumber);
+        }
+      });
+    }, 15_000);
+
     return () => {
       cancelled = true;
+      window.clearInterval(pollId);
     };
-  }, []);
+  }, [activeTab]);
 
   const handleSelectFilter = (nextFilter: PhotoFilterId) => {
     setActiveFilter(nextFilter);
@@ -897,34 +937,48 @@ export const PhotoGuestbookPage: React.FC = () => {
           </div>
         </main>
       ) : (
-        /* Guestbook Wall Archive */
+        /* Guestbook Wall Archive (/archive) */
         <main className="photo-gallery-view">
           <div className="photo-gallery-head">
             <div>
-              <span className="photo-kicker">OWNHOMEOWN.COM / PHOTO</span>
+              <span className="photo-kicker">
+                OWNHOMEOWN.COM / ARCHIVE · {entries.length} CUTS
+              </span>
               <h1 className="photo-title">포토 방명록 아카이브</h1>
             </div>
-            <button
-              type="button"
-              className="photo-btn photo-btn--primary photo-btn--compact"
-              onClick={handleResetAll}
-            >
-              <Camera size={15} aria-hidden="true" />
-              <span>새 1컷 남기기</span>
-            </button>
+            <div className="photo-gallery-head__actions">
+              <button
+                type="button"
+                className="photo-btn photo-btn--ghost photo-btn--compact"
+                onClick={() => void refreshEntries()}
+                aria-label="새로고침"
+              >
+                <RefreshCw size={14} aria-hidden="true" />
+                <span>새로고침</span>
+              </button>
+              <a
+                href="/photo"
+                className="photo-btn photo-btn--primary photo-btn--compact"
+              >
+                <Camera size={15} aria-hidden="true" />
+                <span>촬영 부스 (/photo)</span>
+              </a>
+            </div>
           </div>
 
           {entries.length === 0 ? (
             <div className="photo-empty">
-              <p>아직 등록된 포토 방명록이 없습니다.</p>
-              <button
-                type="button"
-                className="photo-btn photo-btn--primary"
-                onClick={handleResetAll}
-              >
-                <Camera size={16} aria-hidden="true" />
-                <span>첫 번째 1컷 남기기</span>
-              </button>
+              <p>
+                {loadingEntries
+                  ? '포토 방명록을 불러오는 중입니다…'
+                  : '아직 등록된 포토 방명록이 없습니다.'}
+              </p>
+              {!loadingEntries && (
+                <a href="/photo" className="photo-btn photo-btn--primary">
+                  <Camera size={16} aria-hidden="true" />
+                  <span>첫 번째 1컷 남기기</span>
+                </a>
+              )}
             </div>
           ) : (
             <div className="photo-gallery-grid">
