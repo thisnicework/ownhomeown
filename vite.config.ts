@@ -34,39 +34,41 @@ function obfuscateAppChunksPlugin(): Plugin {
     generateBundle(_options, bundle) {
       for (const item of Object.values(bundle)) {
         if (item.type !== 'chunk') continue;
-        // Skip pure third-party vendor chunk
-        if (item.name === 'v') continue;
-        // Keep real-time 60fps pixel-loop chunk fast while still obfuscating strings/identifiers
+        // Skip vendor chunk and Rolldown internal runtime chunks (only obfuscate chunks containing src/ code)
+        const hasSrcModule = item.moduleIds.some(
+          (id) => id.includes('/src/') && !id.includes('node_modules')
+        );
+        if (!hasSrcModule || item.name === 'v') continue;
+
         const isHotCanvasChunk = item.name === 'r';
         const result = JavaScriptObfuscator.obfuscate(item.code, {
           compact: true,
           controlFlowFlattening: !isHotCanvasChunk,
-          controlFlowFlatteningThreshold: isHotCanvasChunk ? 0 : 0.75,
-          deadCodeInjection: !isHotCanvasChunk,
-          deadCodeInjectionThreshold: isHotCanvasChunk ? 0 : 0.35,
+          controlFlowFlatteningThreshold: isHotCanvasChunk ? 0 : 0.5,
+          deadCodeInjection: false,
           debugProtection: false,
-          disableConsoleOutput: true,
+          disableConsoleOutput: false,
           identifierNamesGenerator: 'hexadecimal',
           log: false,
           numbersToExpressions: true,
           renameGlobals: false,
-          selfDefending: !isHotCanvasChunk,
+          selfDefending: false,
           simplify: true,
           splitStrings: true,
-          splitStringsChunkLength: isHotCanvasChunk ? 8 : 5,
+          splitStringsChunkLength: 6,
           stringArray: true,
           stringArrayCallsTransform: true,
-          stringArrayCallsTransformThreshold: 0.85,
+          stringArrayCallsTransformThreshold: 0.75,
           stringArrayEncoding: ['rc4'],
           stringArrayIndexShift: true,
           stringArrayRotate: true,
           stringArrayShuffle: true,
-          stringArrayWrappersCount: isHotCanvasChunk ? 2 : 3,
+          stringArrayWrappersCount: 2,
           stringArrayWrappersChainedCalls: true,
-          stringArrayWrappersParametersMaxCount: 4,
+          stringArrayWrappersParametersMaxCount: 3,
           stringArrayWrappersType: 'function',
-          stringArrayThreshold: 1,
-          transformObjectKeys: true,
+          stringArrayThreshold: 0.9,
+          transformObjectKeys: false,
           unicodeEscapeSequence: false,
         });
         item.code = result.getObfuscatedCode();
