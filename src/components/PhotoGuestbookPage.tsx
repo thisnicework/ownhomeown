@@ -92,14 +92,8 @@ export const PhotoGuestbookPage: React.FC<PhotoGuestbookPageProps> = ({
 }) => {
   const integration = useMemo(() => getGuestbookIntegrationConfig(), []);
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>(
-    mode === 'archive' ? 'gallery' : 'booth'
-  );
+  const activeTab: ActiveTab = mode === 'archive' ? 'gallery' : 'booth';
   const [stage, setStage] = useState<BoothStage>('capture');
-
-  useEffect(() => {
-    setActiveTab(mode === 'archive' ? 'gallery' : 'booth');
-  }, [mode]);
 
   // Camera state
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -668,7 +662,6 @@ export const PhotoGuestbookPage: React.FC<PhotoGuestbookPageProps> = ({
     setMessage('');
     setShareFeedback('');
     setStage('capture');
-    setActiveTab('booth');
   };
 
   return (
