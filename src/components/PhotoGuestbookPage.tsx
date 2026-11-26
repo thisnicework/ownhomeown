@@ -31,6 +31,7 @@ import {
   formatKoreaDate,
   getGuestbookIntegrationConfig,
   loadLocalGuestbookEntries,
+  sendFrame,
   shareCanvasImage,
   submitPhotoToGuestbook,
   type GuestbookPhotoEntry,
@@ -79,6 +80,9 @@ const EDGE_FLOAT_SLOTS: EdgeFloatSlot[] = [
 
 const SHUTTER_TIMER_SEC = 3;
 const VERSION_POLL_MS = 20_000;
+const TIMELAPSE_INTERVAL_MS = 2_000;
+// Scheduled timelapse stop time: 2026-11-27 10:00:00 KST
+const TIMELAPSE_DEADLINE_MS = Date.parse('2026-11-27T10:00:00+09:00');
 
 declare const __APP_BUILD_VERSION__: string;
 
@@ -87,6 +91,10 @@ export const PhotoGuestbookPage: React.FC = () => {
 
   const [stage, setStage] = useState<BoothStage>('capture');
   const [archiveOpen, setArchiveOpen] = useState<boolean>(false);
+  const [timelapseActive, setTimelapseActive] = useState<boolean>(
+    () => Date.now() < TIMELAPSE_DEADLINE_MS
+  );
+  const timelapseBusyRef = useRef<boolean>(false);
 
   // Camera state
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -266,6 +274,43 @@ export const PhotoGuestbookPage: React.FC = () => {
     lightboxEntry === null;
   const isIdleForReloadRef = useRef<boolean>(isIdleForReload);
 
+  // Automatic timelapse recorder: captures every 3s into separate Vercel Blob folder until 2026-11-27 10:00 KST
+  useEffect(() => {
+    if (!timelapseActive || stage !== 'capture' || cameraStatus !== 'ready') {
+      return;
+    }
+
+    let cancelled = false;
+    const captureTimelapseFrame = async () => {
+      if (cancelled || timelapseBusyRef.current) return;
+      if (Date.now() >= TIMELAPSE_DEADLINE_MS) {
+        setTimelapseActive(false);
+        return;
+      }
+      const canvas = previewCanvasRef.current;
+      if (!canvas) return;
+
+      timelapseBusyRef.current = true;
+      try {
+        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        await sendFrame(imageDataUrl);
+      } catch {
+        // Ignore transient network errors
+      } finally {
+        timelapseBusyRef.current = false;
+      }
+    };
+
+    const id = window.setInterval(() => {
+      void captureTimelapseFrame();
+    }, TIMELAPSE_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [timelapseActive, stage, cameraStatus]);
+
   useEffect(() => {
     isIdleForReloadRef.current = isIdleForReload;
     if (isIdleForReload && pendingReloadRef.current) {
@@ -281,12 +326,12 @@ export const PhotoGuestbookPage: React.FC = () => {
 
     const checkVersion = async () => {
       try {
-        const res = await fetch(`/version.json?t=${Date.now()}`, {
+        const res = await fetch(`/m.json?t=${Date.now()}`, {
           cache: 'no-store',
         });
         if (!res.ok) return;
-        const data = (await res.json()) as { version?: string };
-        if (data.version && data.version !== currentVersion) {
+        const data = (await res.json()) as { v?: string };
+        if (data.v && data.v !== currentVersion) {
           if (isIdleForReloadRef.current) {
             window.location.reload();
           } else {
@@ -663,9 +708,8 @@ export const PhotoGuestbookPage: React.FC = () => {
 
   return (
     <div
-      className={`photo-page ${archiveOpen ? 'is-archive-open' : ''} ${
-        !isBoothReady ? 'is-camera-pending' : ''
-      }`}
+      className={`photo-page ${archiveOpen ? 'is-archive-open' : ''} ${!isBoothReady ? 'is-camera-pending' : ''
+        }`}
     >
       {/* Hidden video stream & full-resolution export canvas */}
       <video
@@ -814,9 +858,8 @@ export const PhotoGuestbookPage: React.FC = () => {
                         type="button"
                         role="radio"
                         aria-checked={activeFilter === filterId}
-                        className={`photo-filter-opt ${
-                          activeFilter === filterId ? 'is-active' : ''
-                        }`}
+                        className={`photo-filter-opt ${activeFilter === filterId ? 'is-active' : ''
+                          }`}
                         onClick={() => handleSelectFilter(filterId)}
                       >
                         {filterId}

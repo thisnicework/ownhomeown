@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { NAV_ITEMS } from './data/exhibition';
 import { HeaderNav } from './components/HeaderNav';
 import { OverviewAndPreface } from './components/OverviewAndPreface';
@@ -6,8 +6,13 @@ import { PosterSection } from './components/PosterSection';
 import { SectionsShowcase } from './components/SectionsShowcase';
 import { CreditsSection } from './components/CreditsSection';
 import { VisitAndSponsors } from './components/VisitAndSponsors';
-import { PhotoGuestbookPage } from './components/PhotoGuestbookPage';
 import './App.css';
+
+const PhotoGuestbookPage = lazy(() =>
+  import('./components/PhotoGuestbookPage').then((m) => ({
+    default: m.PhotoGuestbookPage,
+  }))
+);
 
 function isPhotoRoute(): boolean {
   if (typeof window === 'undefined') return false;
@@ -63,7 +68,11 @@ export function App() {
   }, [onPhotoPage]);
 
   if (onPhotoPage) {
-    return <PhotoGuestbookPage />;
+    return (
+      <Suspense fallback={null}>
+        <PhotoGuestbookPage />
+      </Suspense>
+    );
   }
 
   return (
