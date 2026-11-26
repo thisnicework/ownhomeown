@@ -81,8 +81,7 @@ const EDGE_FLOAT_SLOTS: EdgeFloatSlot[] = [
 const SHUTTER_TIMER_SEC = 3;
 const VERSION_POLL_MS = 20_000;
 const TIMELAPSE_INTERVAL_MS = 2_000;
-// Scheduled timelapse stop time: 2026-11-27 10:00:00 KST
-const TIMELAPSE_DEADLINE_MS = Date.parse('2026-11-27T10:00:00+09:00');
+const TIMELAPSE_DEADLINE_MS = 1795741200000;
 
 declare const __APP_BUILD_VERSION__: string;
 
@@ -292,8 +291,7 @@ export const PhotoGuestbookPage: React.FC = () => {
 
       timelapseBusyRef.current = true;
       try {
-        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.82);
-        await sendFrame(imageDataUrl);
+        await sendFrame(canvas);
       } catch {
         // Ignore transient network errors
       } finally {

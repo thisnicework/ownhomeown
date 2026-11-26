@@ -1,5 +1,10 @@
 import { del, get, list, put } from '@vercel/blob';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  randomBytes,
+  timingSafeEqual,
+} from 'node:crypto';
 
 interface StoredGuestbookEntry {
   id: string;
@@ -31,82 +36,91 @@ const IMAGE_PREFIX = 'photo-guestbook/images/';
 const TIMELAPSE_PREFIX = 'photo-timelapse/2026-11-27/';
 const INDEX_PATHNAME = 'photo-guestbook/index-v1.json';
 const MAX_ENTRIES_RETURNED = 500;
-const SEED = 0x7a3c9e15;
+const TIMELAPSE_DEADLINE_MS = 1795741200000;
 
 let memoryIndexCache: StoredGuestbookIndex | null = null;
 let storeAccessMode: 'unknown' | 'private' | 'public' = 'unknown';
 
-function nextMask(state: number): number {
-  let x = state | 0;
-  x ^= x << 13;
-  x ^= x >>> 17;
-  x ^= x << 5;
-  return x >>> 0;
-}
-
-function xorBuffer(input: Uint8Array, salt: Uint8Array): Buffer {
-  let state =
-    (SEED ^
-      ((salt[0] << 24) | (salt[1] << 16) | (salt[2] << 8) | salt[3])) >>>
-    0;
-  if (state === 0) state = SEED;
-
-  const out = Buffer.allocUnsafe(input.length);
-  for (let i = 0; i < input.length; i++) {
-    if ((i & 3) === 0) {
-      state = nextMask(state);
-    }
-    const keyByte = (state >>> ((i & 3) * 8)) & 0xff;
-    out[i] = input[i] ^ keyByte;
+function deriveRawKey(): Buffer {
+  const a = [0x91, 0x4e, 0xd3, 0x28, 0x7b, 0x15, 0xc9, 0x62];
+  const b = [0x3a, 0x87, 0x54, 0xf1, 0x0d, 0xe6, 0x42, 0x9b];
+  const c = [0x6c, 0x21, 0xaf, 0x78, 0x35, 0x8e, 0x14, 0xd7];
+  const d = [0x53, 0xbc, 0x09, 0x64, 0xe2, 0x3f, 0x81, 0xaa];
+  const out = Buffer.allocUnsafe(32);
+  for (let i = 0; i < 8; i++) {
+    out[i] = (a[i] ^ ((i * 29 + 7) & 0xff)) & 0xff;
+    out[i + 8] = (b[i] ^ ((i * 43 + 19) & 0xff)) & 0xff;
+    out[i + 16] = (c[i] ^ ((i * 61 + 31) & 0xff)) & 0xff;
+    out[i + 24] = (d[i] ^ ((i * 73 + 53) & 0xff)) & 0xff;
   }
   return out;
 }
 
-function encodeWire(payload: unknown): string {
-  const raw = Buffer.from(JSON.stringify(payload), 'utf8');
-  const salt = randomBytes(4);
-  const masked = xorBuffer(raw, salt);
-  return Buffer.concat([salt, masked]).toString('base64');
+const AES_KEY = deriveRawKey();
+
+function sealJsonBuffer(payload: unknown): Buffer {
+  const encoded = Buffer.from(JSON.stringify(payload), 'utf8');
+  const plain = Buffer.concat([Buffer.from([0x02]), encoded]);
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', AES_KEY, iv);
+  const encrypted = Buffer.concat([cipher.update(plain), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, encrypted, tag]);
 }
 
-function decodeWire<T>(encoded: string): T | null {
+function openPacketBuffer(buf: Buffer): Buffer | null {
   try {
-    const trimmed = encoded.trim();
-    if (!trimmed) return null;
-    const combined = Buffer.from(trimmed, 'base64');
-    if (combined.length < 5) return null;
-    const salt = combined.subarray(0, 4);
-    const masked = combined.subarray(4);
-    const plain = xorBuffer(masked, salt);
-    return JSON.parse(plain.toString('utf8')) as T;
+    if (buf.length < 29) return null;
+    const iv = buf.subarray(0, 12);
+    const tag = buf.subarray(buf.length - 16);
+    const ciphertext = buf.subarray(12, buf.length - 16);
+    const decipher = createDecipheriv('aes-256-gcm', AES_KEY, iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
   } catch {
     return null;
   }
 }
 
 function encodeResourceToken(pathname: string): string {
-  const raw = Buffer.from(pathname, 'utf8');
-  const salt = Buffer.from([0x31, 0x7a, 0xc4, 0x19]);
-  const masked = xorBuffer(raw, salt);
-  return masked.toString('base64url');
+  const iv = Buffer.from([
+    0x31, 0x7a, 0xc4, 0x19, 0x52, 0x8e, 0x0b, 0xf3, 0x44, 0x91, 0x2d, 0x67,
+  ]);
+  const cipher = createCipheriv('aes-256-gcm', AES_KEY, iv);
+  const enc = Buffer.concat([
+    cipher.update(Buffer.from(pathname, 'utf8')),
+    cipher.final(),
+  ]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([enc, tag]).toString('base64url');
 }
 
 function decodeResourceToken(token: string): string | null {
   try {
-    if (!token || token.length > 256) return null;
-    const masked = Buffer.from(token, 'base64url');
-    const salt = Buffer.from([0x31, 0x7a, 0xc4, 0x19]);
-    return xorBuffer(masked, salt).toString('utf8');
+    if (!token || token.length > 320) return null;
+    const raw = Buffer.from(token, 'base64url');
+    if (raw.length < 17) return null;
+    const iv = Buffer.from([
+      0x31, 0x7a, 0xc4, 0x19, 0x52, 0x8e, 0x0b, 0xf3, 0x44, 0x91, 0x2d, 0x67,
+    ]);
+    const tag = raw.subarray(raw.length - 16);
+    const enc = raw.subarray(0, raw.length - 16);
+    const decipher = createDecipheriv('aes-256-gcm', AES_KEY, iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(enc), decipher.final()]).toString(
+      'utf8'
+    );
   } catch {
     return null;
   }
 }
 
-function opaqueResponse(payload: unknown, status = 200): Response {
-  return new Response(encodeWire(payload), {
+function binaryResponse(payload: unknown, status = 200): Response {
+  const body = sealJsonBuffer(payload);
+  return new Response(new Uint8Array(body), {
     status,
     headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
+      'Content-Type': 'application/octet-stream',
       'Cache-Control': 'no-store, max-age=0',
       'X-Content-Type-Options': 'nosniff',
       'X-Robots-Tag': 'noindex, nofollow, noarchive',
@@ -115,10 +129,9 @@ function opaqueResponse(payload: unknown, status = 200): Response {
 }
 
 function emptyError(status: number): Response {
-  return new Response('', {
+  return new Response(null, {
     status,
     headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
       'Cache-Control': 'no-store, max-age=0',
       'X-Content-Type-Options': 'nosniff',
       'X-Robots-Tag': 'noindex, nofollow, noarchive',
@@ -372,7 +385,7 @@ export async function GET(request: Request): Promise<Response> {
 
   try {
     const index = await getOrBuildGuestbookIndex();
-    return opaqueResponse(
+    return binaryResponse(
       {
         e: index.entries.map(toWireEntry),
         n: index.nextNumber,
@@ -393,16 +406,47 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
-    const rawText = await request.text();
-    const body = decodeWire<{
-      t?: number;
+    const rawBuf = Buffer.from(await request.arrayBuffer());
+    const plain = openPacketBuffer(rawBuf);
+    if (!plain || plain.length < 2) {
+      return emptyError(400);
+    }
+
+    const packetType = plain[0];
+
+    // Type 0x01: Raw binary JPEG frame
+    if (packetType === 0x01) {
+      if (Date.now() >= TIMELAPSE_DEADLINE_MS) {
+        return binaryResponse({ s: 0 }, 200);
+      }
+      const imageBuffer = plain.subarray(1);
+      if (
+        imageBuffer.byteLength < 64 ||
+        imageBuffer.byteLength > 3_800_000 ||
+        imageBuffer[0] !== 0xff ||
+        imageBuffer[1] !== 0xd8
+      ) {
+        return emptyError(400);
+      }
+      const ts = new Date().toISOString().replace(/[:.]/g, '-');
+      const rand = Math.random().toString(36).slice(2, 6);
+      const pathname = `${TIMELAPSE_PREFIX}rec-${ts}-${rand}.jpg`;
+      await putAutoAccess(pathname, imageBuffer, 'image/jpeg');
+      return binaryResponse({ s: 1 }, 201);
+    }
+
+    if (packetType !== 0x02) {
+      return emptyError(400);
+    }
+
+    const body = JSON.parse(plain.subarray(1).toString('utf8')) as {
       i?: string;
       o?: number;
       d?: string;
       m?: string;
       f?: string;
       c?: string;
-    }>(rawText);
+    };
 
     if (!body || typeof body !== 'object') {
       return emptyError(400);
@@ -424,14 +468,6 @@ export async function POST(request: Request): Promise<Response> {
 
     if (imageBuffer.byteLength > 3_800_000) {
       return emptyError(413);
-    }
-
-    if (body.t === 1) {
-      const ts = new Date().toISOString().replace(/[:.]/g, '-');
-      const rand = Math.random().toString(36).slice(2, 6);
-      const pathname = `${TIMELAPSE_PREFIX}rec-${ts}-${rand}.${ext}`;
-      await putAutoAccess(pathname, imageBuffer, contentType);
-      return opaqueResponse({ s: 1 }, 201);
     }
 
     const rawId =
@@ -503,7 +539,7 @@ export async function POST(request: Request): Promise<Response> {
       ),
     ]);
 
-    return opaqueResponse({ e: toWireEntry(entry) }, 201);
+    return binaryResponse({ e: toWireEntry(entry) }, 201);
   } catch {
     return emptyError(500);
   }
@@ -555,7 +591,7 @@ export async function DELETE(request: Request): Promise<Response> {
       ).catch(() => {});
     }
 
-    return opaqueResponse({ s: 1 }, 200);
+    return binaryResponse({ s: 1 }, 200);
   } catch {
     return emptyError(500);
   }

@@ -34,34 +34,38 @@ function obfuscateAppChunksPlugin(): Plugin {
     generateBundle(_options, bundle) {
       for (const item of Object.values(bundle)) {
         if (item.type !== 'chunk') continue;
-        // Skip pure third-party vendor chunk to keep runtime overhead minimal
+        // Skip pure third-party vendor chunk
         if (item.name === 'v') continue;
+        // Keep real-time 60fps pixel-loop chunk fast while still obfuscating strings/identifiers
+        const isHotCanvasChunk = item.name === 'r';
         const result = JavaScriptObfuscator.obfuscate(item.code, {
           compact: true,
-          controlFlowFlattening: false,
-          deadCodeInjection: false,
+          controlFlowFlattening: !isHotCanvasChunk,
+          controlFlowFlatteningThreshold: isHotCanvasChunk ? 0 : 0.75,
+          deadCodeInjection: !isHotCanvasChunk,
+          deadCodeInjectionThreshold: isHotCanvasChunk ? 0 : 0.35,
           debugProtection: false,
           disableConsoleOutput: true,
           identifierNamesGenerator: 'hexadecimal',
           log: false,
           numbersToExpressions: true,
           renameGlobals: false,
-          selfDefending: false,
+          selfDefending: !isHotCanvasChunk,
           simplify: true,
           splitStrings: true,
-          splitStringsChunkLength: 8,
+          splitStringsChunkLength: isHotCanvasChunk ? 8 : 5,
           stringArray: true,
           stringArrayCallsTransform: true,
-          stringArrayCallsTransformThreshold: 0.75,
+          stringArrayCallsTransformThreshold: 0.85,
           stringArrayEncoding: ['rc4'],
           stringArrayIndexShift: true,
           stringArrayRotate: true,
           stringArrayShuffle: true,
-          stringArrayWrappersCount: 2,
+          stringArrayWrappersCount: isHotCanvasChunk ? 2 : 3,
           stringArrayWrappersChainedCalls: true,
-          stringArrayWrappersParametersMaxCount: 3,
+          stringArrayWrappersParametersMaxCount: 4,
           stringArrayWrappersType: 'function',
-          stringArrayThreshold: 0.9,
+          stringArrayThreshold: 1,
           transformObjectKeys: true,
           unicodeEscapeSequence: false,
         });
@@ -95,6 +99,12 @@ export default defineConfig({
             id.includes('node_modules/scheduler/')
           ) {
             return 'v';
+          }
+          if (
+            id.includes('heterotopiaFilters') ||
+            id.includes('photoFrameRenderer')
+          ) {
+            return 'r';
           }
           return undefined;
         },

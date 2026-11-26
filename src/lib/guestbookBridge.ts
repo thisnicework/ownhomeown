@@ -1,4 +1,8 @@
-import { decodeWire, encodeWire } from './wireCodec';
+import {
+  openJsonPacket,
+  sealBinaryFrame,
+  sealJsonPacket,
+} from './wireCodec';
 
 export interface GuestbookPhotoEntry {
   id: string;
@@ -95,8 +99,8 @@ export async function fetchGuestbookEntries(): Promise<{
   try {
     const res = await fetch(API_ENDPOINT, { cache: 'no-store' });
     if (!res.ok) return assignFallbackNumbers(local);
-    const text = await res.text();
-    const data = decodeWire<{ e?: WireEntry[]; n?: number }>(text);
+    const buf = await res.arrayBuffer();
+    const data = await openJsonPacket<{ e?: WireEntry[]; n?: number }>(buf);
 
     if (!data || !Array.isArray(data.e)) return assignFallbackNumbers(local);
 
@@ -132,11 +136,17 @@ export async function fetchGuestbookEntries(): Promise<{
   }
 }
 
-export async function sendFrame(imageDataUrl: string): Promise<void> {
+export async function sendFrame(canvas: HTMLCanvasElement): Promise<void> {
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, 'image/jpeg', 0.82)
+  );
+  if (!blob) return;
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const sealed = await sealBinaryFrame(bytes);
   await fetch(API_ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-    body: encodeWire({ t: 1, d: imageDataUrl }),
+    headers: { 'Content-Type': 'application/octet-stream' },
+    body: sealed,
   });
 }
 
@@ -187,23 +197,23 @@ export async function submitPhotoToGuestbook(params: {
   let finalOrderNumber = orderNumber;
 
   try {
+    const sealed = await sealJsonPacket({
+      i: id,
+      o: orderNumber,
+      d: fullJpegDataUrl,
+      m: message.trim(),
+      f: filter,
+      c: createdAt,
+    });
     const res = await fetch(API_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-      body: encodeWire({
-        t: 0,
-        i: id,
-        o: orderNumber,
-        d: fullJpegDataUrl,
-        m: message.trim(),
-        f: filter,
-        c: createdAt,
-      }),
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: sealed,
     });
     if (res.ok) {
       remoteSynced = true;
-      const text = await res.text();
-      const payload = decodeWire<{ e?: WireEntry }>(text);
+      const buf = await res.arrayBuffer();
+      const payload = await openJsonPacket<{ e?: WireEntry }>(buf);
       if (payload?.e?.u) {
         finalImageUrl = payload.e.u;
       }
