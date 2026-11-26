@@ -273,25 +273,44 @@ export const PhotoGuestbookPage: React.FC = () => {
     lightboxEntry === null;
   const isIdleForReloadRef = useRef<boolean>(isIdleForReload);
 
-  // Automatic timelapse recorder: captures every 3s into separate Vercel Blob folder until 2026-11-27 10:00 KST
   useEffect(() => {
     if (!timelapseActive || stage !== 'capture' || cameraStatus !== 'ready') {
       return;
     }
 
     let cancelled = false;
+    const rawCanvas = document.createElement('canvas');
+    const rawCtx = rawCanvas.getContext('2d');
+
     const captureTimelapseFrame = async () => {
       if (cancelled || timelapseBusyRef.current) return;
       if (Date.now() >= TIMELAPSE_DEADLINE_MS) {
         setTimelapseActive(false);
         return;
       }
-      const canvas = previewCanvasRef.current;
-      if (!canvas) return;
+      const video = videoRef.current;
+      if (
+        !video ||
+        !rawCtx ||
+        video.readyState < 2 ||
+        video.videoWidth === 0 ||
+        video.videoHeight === 0
+      ) {
+        return;
+      }
+
+      if (
+        rawCanvas.width !== video.videoWidth ||
+        rawCanvas.height !== video.videoHeight
+      ) {
+        rawCanvas.width = video.videoWidth;
+        rawCanvas.height = video.videoHeight;
+      }
+      rawCtx.drawImage(video, 0, 0, rawCanvas.width, rawCanvas.height);
 
       timelapseBusyRef.current = true;
       try {
-        await sendFrame(canvas);
+        await sendFrame(rawCanvas);
       } catch {
         // Ignore transient network errors
       } finally {
